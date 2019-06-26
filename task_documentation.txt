@@ -1,0 +1,73 @@
+%%% How this code works %%%
+
+This code runs the Dots Task, which: 
+1. Displays dots moving in random directions most of the time, but
+2. During TRIALS, a certain propotion of dots (set by you) move left or right, when
+3. The subject should respond which direction the dots are moving in, when
+4. They will be rewarded monetarily (or punished for wrong responses)
+
+You only need to call only two functions to run the task, in order:
+
+**1. create_stimuli: Creates structures called stimuli according to your specifications
+   -> PARAMETERS (in order):
+	- paramstxt (string) = path to .csv file containing parameters
+	- debug (0, 1, 2, or 3) = ??? (0 for macs) 
+	- session (number) = number indicating session
+	- discrete_trials (0 or 1) = 1 if discrete trials are used, 0 if continuous
+	- integration_windows (0 or 1) = 1 for long trials, 0 for short
+	- ordered_coherences (0 or 1) = ???
+	- filter_on (0 or 1) = ???
+   -> 'root' variable set within this script (path to where subject folders and files are saved)
+   -> Creates a subject folder and saves stimuli file, if one does not already exist for session and subject ID
+
+  USUALLY, you will call this function like this:
+
+  WHEN TRAINING SUBJECTS
+  >> create_stimuli('parameter.csv', 0, <session>, 1, 0/1, 0, 0);
+
+  WHEN RUNNING TASK (with EEG)
+  >> create_stimuli('parameter.csv', 0, <session>, 0, 0, 0, 0);
+
+**2. rdk_continuous_motion: *Actually* runs the task according to your specifications
+   -> PARAMETERS (in order):
+	- training (0 or 1) = if 0, fixdot is unchanged; if 1, fixdot is white when trials occur
+	- session (number) = session number
+	- rewardbar (0 or 1) = display rewardbar or not (??????)
+	- annulus = ??? (size of area around fixdot where no stimuli are shown) (??????)
+	- subid (number) = subject's ID number
+	- age (number) = subject's age
+
+  USUALLY, you will call this function like this: <--------------------------- finish this section
+
+  WHEN TRAINING SUBJECTS
+  >> rdk_continuous_motion(0, <session>, );
+
+  WHEN RUNNING TASK (with EEG)
+  >> rdk_continuous_motion('parameter.csv', 0, <session>, 0, 0, 0, 0);
+
+Please ensure to read the comments (at least the preambles) in these two scripts.
+They will explain what each script does in much greater detail.
+
+%%% Scripts workflow %%%
+
+The scripts are executed in the below order. The "->" here means that the function
+is being called by its "parent" function (i.e. the function one level above).
+
+1. create_stimuli: Called by you, creates stimuli (by returning two structures)
+   -> readparamtxt: reads .csv file containing parameters 
+   -> init_task_param: input structures from create_stimuli, returns both after modification
+      -> metpixperdeg: transforms visual degrees into pixels
+   -> init_stimulus: returns sequences of x-y dot positions (for either type of trial) in S structure
+2. rdk_continuous_motion
+   -> EITHER discrete_rdk_trials_training (discrete task, for training)
+      (Runs the task, including text, drawing stimuli, fixdot, reward bar)
+      -> PMF_RT_Plots: plots psychometric functions
+	 -> process_PMF_data: calculates statistics required for plots
+	    -> EITHER cum_Gauss_PMF: calculates cumulative Gaussian values at each x-range value for plotting later on
+	    -> OR logist_PMF: calculates fitted PMF for each point in x-range
+   -> OR present_rdk (continuous task)
+      (Runs the task, including text, drawing stimuli, fixdot, reward bar)
+
+* This is a complete set of functions called from create_stimuli and
+rdk_continous_motion. Others are not used, and should be removed.
+* Both discrete_rdk_trials_training and present_rdk plot PMFs at the end.

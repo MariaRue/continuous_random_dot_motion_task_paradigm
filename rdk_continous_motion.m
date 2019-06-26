@@ -1,39 +1,40 @@
 function [D,S,tconst] = rdk_continous_motion(training,session,rewardbar,annulus,subid,age)
 
-% runs task to display continous random dot or discrete random dot stimuli.
-% During a session of continous random dots incoherent and
-% coherent motion periods are interleaved. In the coherent motion periods
-% some dots will move either to the left or to the right while the others continue to
-% move randomly. Each session consits of several blocks in which the lenght
-% of incoherent and coherent motion periods can be altered (see block_length and condition_vec below)
-% 
-% In sessions with discrete trials only coherent motion is shown for a
-% given period for each trial (see integration_window below). 
-     
-% In the continuous rdk version, the coherence level oscillates with some
-% sd around 0 in incoherent motion periods, and with the same sd about some
-% mean coherence value in coherent motion periods 
+%% Neb: Rename to "continUous" instead of "continous"
+
+% PURPOSE: This function is the one which actually runs the task to display
+% either (1) continous random dot or (2) discrete random dot stimuli, as
+% determined by create_stimuli (which you *must* have called before calling
+% this function).
 %
-% Most parameters are defined in a tabular csv file - see below 
+% Two major sections to this function.
+
+% During a session of continous random dots, periods of incoherent and
+% coherent dot motion are interleaved. In the coherent motion periods,
+% some dots will move either to the left or to the right while the others 
+% continue to move randomly. Each session consists of several blocks in 
+% which the length of incoherent and coherent motion periods can be 
+% altered (see block_length and condition_vec below).
 % 
-% To make this function run change the root variables below to preferred
+% In sessions with discrete trials, only coherent motion is shown for a
+% given period for each trial (see integration_window below). 
+% 
+% To make this function run, change the root variables below to preferred
 % directories and change device_number(2) to device_number(1) in
 % present_rdk.mat and discrete_rdk_trials_training.mat (my mac only accepts 
-% device_number(2) for some strange reason)
+% device_number(2) for some strange reason) <--------------------- ?
 %
-% Responses are made with left and right arrow keys. (left = motion to the left, 
-% right = motion to the right)
+% Responses are made by pressing the letters A (left) and L (right)
 % 
-% Feedback is given after each trial by changing colour and shape of fix
-% dot in centre of moving dots: 
-%                                green circle - correct response during
-%                                coherent motion 
-%                                red circle - incorrect response during
-%                                coherent motion 
-%                                blue triangle - missed coherent motion 
-%                                yellow square - response during incoherent
-%                                motion (this cue is not in discrete trial version)
-
+% Feedback is given after each trial by changing colour of fix dot in the 
+% centre of moving dots: 
+%      Green   - correct response during
+%                coherent motion 
+%      Red     - incorrect response during
+%                coherent motion 
+%      Blue    - missed coherent motion 
+%      Yellow  - response during incoherent
+%                motion (this cue is not in discrete trial version)
 
 % After 10 minutes in a discrete trial session, after each block in the
 % continuous rdk version and at the end of each session PMFs and rt
@@ -42,7 +43,7 @@ function [D,S,tconst] = rdk_continous_motion(training,session,rewardbar,annulus,
 % session by hitting 'n' and enter. In this case, all the data is getting
 % saved and programme returns to matlab terminal. Experimenter can now
 % start new session that is for example more appropriate for behavioural performance of
-% participant 
+% participant <--------- ? does this still exist
 
 %%-- Input --%% 
 
@@ -54,10 +55,13 @@ function [D,S,tconst] = rdk_continous_motion(training,session,rewardbar,annulus,
 
 % subid                 - ID assigned to participant (as number), e.g. 4
 
+% Neb: should we remove annulus and rewardbar from this function's
+% parameters? They seem never to be used.
+
 
 %%-- Output --%% 
 
-% D = response output matrix, lines indicating trial or response (in continuous motin version)  
+% D = respMat = response output matrix, lines indicating trial or response (in continuous motin version)  
 %               column: 
 %                       1: points won on current trial or for current
 %                           response (check paramte.csv and create stimuli for
@@ -94,8 +98,7 @@ function [D,S,tconst] = rdk_continous_motion(training,session,rewardbar,annulus,
 % bar when starting a new session  and to get an idea how many pounds have alreadby been won. 
 
 
-%%
-% where stimuli files are saved in subject specific folders, created with create_stimuli
+%% Where stimuli files are saved in subject specific folders, created with create_stimuli
 % this is for eyetracker compouter in test2
 % root_stim_file = 'C:\Users\student01\Desktop\maria_ruesseler\continuous_rdk_task\stim';
 % % where you want to save the output files in subject specific folders
@@ -112,6 +115,7 @@ function [D,S,tconst] = rdk_continous_motion(training,session,rewardbar,annulus,
 % % where you want to save the output files in subject specific folders
 %  root_outfile =      '/Users/maria/Documents/data/data.continuous_rdk/EEG_pilot/behaviour';
  
+%%%--- 1. Set up file paths; load and save files ---%%%
 infile = sprintf('sub%03.0f_sess%03.0f_stim.mat',subid,session); %updated input filename of subject and session
 infolder = sprintf('sub%03.0f',subid); %updated input foldername of subject
 indir = fullfile(root_stim_file,infolder); % full path to input folder
@@ -138,39 +142,24 @@ addpath(outdir);
 
 % check whether this file and session already exist for subject 
 
- if exist(outdir,'dir') % check whether folder exists 
-%     
-    if exist(fullfile(outdir,outfile),'file') == 2 % if file already exist return
-%         
-         fprintf('\n\n\nA File with this subject and session already exists!\nPlease specify other session...')
+if exist(outdir,'dir') % check whether folder exists  
+    if exist(fullfile(outdir,outfile),'file') == 2 % if file already exist return 
+        fprintf('\n\n\nA File with this subject and session already exists!\nPlease specify other session...')
         sca
         return
-        
-        
     end
-    
-    
- else % if folder doesnt exist yet, create folder for subject
+else % if folder doesnt exist yet, create folder for subject
     mkdir(outdir) 
-    
 end % if file exists
 
+%%%--- 2. Present stimulus (i.e. what the subject sees) ---%%%
+if discrete_trials % If function called to run with discrete trials...
+    [D,S] = discrete_rdk_trials_training(S,tconst,rewardbar,training,outdir,outfile);
+else % ...otherwise, with continuous trials 
+    [S,D,tconst] = present_rdk(S, tconst, training,outdir,outfile,rewardbar,1,1,0,annulus,0); 
+end
 
-
-
-%%%--- present stimulus ---%%%
-if discrete_trials % run task with discrete trials
-
-[D,S]=  discrete_rdk_trials_training(S,tconst,rewardbar,training,outdir,outfile);
-    
-else % run task with continous rdk motion 
-
-% 
-  [S,D,tconst] = present_rdk(S, tconst, training,outdir,outfile,rewardbar,1,1,0,annulus,0);
-
-end % if discrete trials 
-
-end % function
+end
 
 
 
