@@ -1,14 +1,29 @@
-%%% How this code works %%%
+%%% How to run this task %%%
 
 This code runs the Dots Task, which: 
-1. Displays dots moving in random directions most of the time, but
+1. Displays dots moving in random directions most of the time, but...
 2. During TRIALS, a certain propotion of dots (set by you) move left or right, when
 3. The subject should respond which direction the dots are moving in, when
-4. They will be rewarded monetarily (or punished for wrong responses)
+4. They will be rewarded monetarily (or punished for wrong or missed responses)
 
-You only need to call only two functions to run the task, in order:
+You need to run this task over at least two days (one for training the participant,
+the other for "real" i.e. when you collect EEG data). According to our protocol
+(you will probably change this to fit your needs) the training lasts ~two hours,
+while the EEG data collection lasts ~four hours.
 
-**1. create_stimuli: Creates structures called stimuli according to your specifications
+On every day, you will run multiple SESSIONS (i.e instances) of this task. Each 
+session contains several TRIALS, during which the participant must respond. You
+set up and run EACH session by changing the PARAMETERS you input into each function 
+just before you call it (see below). But there are only two functions you need to call, 
+one after the other (the rest is up to the participant), so it's quite simple.
+
+%%% How this code works %%%
+
+You only need to call two functions to run a session of the task. (NB. Sometimes, if you
+have already set up stimuli for a session, you will only run the second function. There is
+no need to "re-set up" stimuli if you haven't changed anything.) In order:
+
+**1. create_stimuli: Sets up stimuli (as MATLAB structures) according to your specifications
    -> PARAMETERS (in order):
 	- paramstxt (string) = path to .csv file containing parameters
 	- debug (0, 1, 2, or 3) = ??? (0 for macs) 
@@ -25,10 +40,10 @@ You only need to call only two functions to run the task, in order:
   WHEN TRAINING SUBJECTS
   >> create_stimuli('parameter.csv', 0, <session>, 1, 0/1, 0, 0);
 
-  WHEN RUNNING TASK (with EEG)
+  WHEN RECORDING DATA (with EEG)
   >> create_stimuli('parameter.csv', 0, <session>, 0, 0, 0, 0);
 
-**2. rdk_continuous_motion: *Actually* runs the task according to your specifications
+**2. rdk_continuous_motion: Runs the task using above stimuli + your extra specifications
    -> PARAMETERS (in order):
 	- training (0 or 1) = if 0, fixdot is unchanged; if 1, fixdot is white when trials occur
 	- session (number) = session number
@@ -39,18 +54,18 @@ You only need to call only two functions to run the task, in order:
 
   USUALLY, you will call this function like this: <--------------------------- finish this section
 
-  WHEN TRAINING SUBJECTS
-  >> rdk_continuous_motion(0, <session>, );
+  WHEN TRAINING SUBJECTS (note training parameter is ONE)
+  >> rdk_continuous_motion(1, <session>, <subject's id>, <subject's age>);
 
-  WHEN RUNNING TASK (with EEG)
-  >> rdk_continuous_motion('parameter.csv', 0, <session>, 0, 0, 0, 0);
+  WHEN RECORDING DATA (with EEG) (note training parameter is ZERO)
+  >> rdk_continuous_motion(0, <session>, <subject's id>, <subject's age>);
 
 Please ensure to read the comments (at least the preambles) in these two scripts.
 They will explain what each script does in much greater detail.
 
 %%% Scripts workflow %%%
 
-The scripts are executed in the below order. The "->" here means that the function
+The scripts are executed in the order below. The "->" here means that the function
 is being called by its "parent" function (i.e. the function one level above).
 
 1. create_stimuli: Called by you, creates stimuli (by returning two structures)
@@ -59,15 +74,15 @@ is being called by its "parent" function (i.e. the function one level above).
       -> metpixperdeg: transforms visual degrees into pixels
    -> init_stimulus: returns sequences of x-y dot positions (for either type of trial) in S structure
 2. rdk_continuous_motion
-   -> EITHER discrete_rdk_trials_training (discrete task, for training)
+   -> EITHER discrete_rdk_trials_training (runs a discrete-trials task, for training)
       (Runs the task, including text, drawing stimuli, fixdot, reward bar)
       -> PMF_RT_Plots: plots psychometric functions
 	 -> process_PMF_data: calculates statistics required for plots
 	    -> EITHER cum_Gauss_PMF: calculates cumulative Gaussian values at each x-range value for plotting later on
 	    -> OR logist_PMF: calculates fitted PMF for each point in x-range
-   -> OR present_rdk (continuous task)
+   -> OR present_rdk (runs a continuous-trials task)
       (Runs the task, including text, drawing stimuli, fixdot, reward bar)
 
 * This is a complete set of functions called from create_stimuli and
-rdk_continous_motion. Others are not used, and should be removed.
+rdk_continous_motion.
 * Both discrete_rdk_trials_training and present_rdk plot PMFs at the end.
