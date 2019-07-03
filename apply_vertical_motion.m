@@ -56,6 +56,7 @@ function [xy] = apply_vertical_motion(xy, mean_coh, mean_coh_sd, mean_freq, mean
 %% Realcode
 block_length = size(xy, 3); % get total number of frames in block
 coherence = normrnd(mean_coh, mean_coh_sd); % get coherence for these VMPs
+% disp(['Coherence: ' num2str(coherence)]);
 
 frame_vector = zeros(1, block_length); % create initial frame vector
 
@@ -128,40 +129,59 @@ index_signal = find(coh_prob <= coherence);
 % index_noise = coh_prob > coherence; % array of noise dots (i.e.
                                          % everybody else)
 
+%%% MOVE DOTS %%%
 for f = 4:block_length % for all frames (except initial three)
     % Neb: maybe can optimise above, so that somehow we only go through
     % all the frames where frame_vector is non-zero?
-    xy(2,index_signal,f) = xy(2,index_signal,f-3) + (step * frame_vector(1,f)); % change y pos
+    xy(2,index_signal,f) = xy(2,index_signal,f-3) - (step * frame_vector(1,f) * 3); % change y pos
     % NB. frame_vector(1,f) = 0 for all frames w/o vertical motion, so
     % there will be no changes for those
+    
 
     %%% REFLECT DOTS IF MOVED OUT OF APERTURE
     % borrowed and modified from move_dots.m
     % calculate distance to aperture centre
-    distance_y_centre = sqrt(xy(1,index_signal,f).^2 + xy(2,index_signal,f).^2);
+    distance_x_centre = sqrt(xy(1,index_signal,f).^2 + xy(2,index_signal,f).^2);
 
     % get array of signal dots that have a distance greater than the radius
     % meaning that they are outside the aperture
-    idx_dist = index_signal(distance_y_centre >= ap_radius);
+    idx_dist = index_signal(distance_x_centre >= ap_radius);
     if ~isempty(idx_dist) % if some have been found
-        % reduce X coordinate so that dot is inside aperture
-%         xy(1, idx_dist, f) = ((randi(2)-1.5)*2)*ap_radius; % either
-%         % reflext Y coordinate on other side of aperture
-%         xy(2,idx_dist,f) = 
-        % change x and y coordinates of such escaped dots to a place on a
-        % random position on the aperture
-        xy(1,idx_dist,f) = 2 .* ap_radius .* rand(size(idx_dist)) - ap_radius; % set X coordinate to be *some* proportion of the aperture radius (between 0x and 1xap_radius)
-        xy(2,idx_dist,f) = sqrt((ap_radius^2) - (xy(1,idx_dist,f).^2)); % set Y coordinate to be exactly equal to the X coordinate in trigonometric terms (i.e. placing the dot exactly on the aperture)
+        % replex y and x coordinates of the dots to a place on the opposite
+        % site of the aperture
+        
+        % give them a random X coordinate
+        xy(1,idx_dist,f) = 2 .* ap_radius .* rand(size(idx_dist)) - ap_radius;
+        % give them a Y coordinate, such that they're on the edge of the annulus
+        xy(2,idx_dist,f) = sqrt((ap_radius^2) - (xy(1,idx_dist,f).^2));
         
         % move signal dots back into aperture
-        % xy(1,idx_dist,f) = xy(1,idx_dist,f) - rand(size(idx_dist)) .* step; % X coordinate
-        %% Neb: the issue is just this line
-        xy(2,idx_dist,f) = xy(2,idx_dist,f) - rand(size(idx_dist)) .* step; % Y coordinate
-
+        xy(2,idx_dist,f) = xy(2,idx_dist,f) - rand(size(idx_dist)) .* step .* 3;
+        
         % needs to be mirrored if coherence is positive
-        if frame_vector(1,f) > 0
-            xy(2,idx_dist,f) = -xy(2,idx_dist,f);
+        if frame_vector(1, f) < 0 % has to be > 0 (not < 0 or ~= 0) ???
+            xy(2,idx_dist,f) = - xy(2,idx_dist,f);
         end
     end
 end
 end
+
+%% additional functions
+% xypos function - creates randomised x and y coordinates for n number of
+% dots, for a given aperture radius r 
+% Returns a 2xn double, with rows for x and y coordinates, and one column 
+% for each dot
+% Borrowed from move_dots.m
+
+function [XY] = xypos(n, r)
+
+% create random angle (in radians) for EACH dot
+theta = 2*pi*rand(1,n);
+
+% create random radius (in pixels) for EACH dot
+radius = r * sqrt(rand(1,n));
+
+% back to cartesian coordinate system
+XY = [radius.*cos(theta); radius.*sin(theta)];
+
+end %xypos
