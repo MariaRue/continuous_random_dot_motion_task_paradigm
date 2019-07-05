@@ -8,10 +8,10 @@ function [xy,coherence_frame,mean_coherence,pre_incoh_mo_coh,blocks_shuffled] = 
     mean_vcoh_sd, mean_vfreq, mean_vfreq_sd, mean_vlength, mean_vlength_sd, ...
     step_v)
 
-% This function creates dot positions of rdks for discrete trials or 
-% continuous blocks of motion and saves x and y coordinates of dots for 
-% *each frame*. Each dot has its own X/Y coordinates for each frame, and
-% all of this is saved in the xy matrix (which is output). This matrix is
+% This function creates the dots' X/Y positions for discrete trials or 
+% continuous blocks of motion and saves those coordinates for *each* frame.
+% THus, every dot has its own X/Y coordinates for each frame, and
+% all of this is saved in the matrix 'xy' which is output. This matrix is
 % then used to render all the dots in either discrete_rdk_trials_training
 % (when doing discrete trials) or present_rdk (when doing continous trials)
 %
@@ -19,8 +19,11 @@ function [xy,coherence_frame,mean_coherence,pre_incoh_mo_coh,blocks_shuffled] = 
 % a trial, i.e. during "coherence") and NOISE dots (which just move
 % randomly)
 %
-% NB. The stimulus is coded in a way that there are 3 sets of dots and 
-% every set of dots is displayed only every third frame
+% NB. The stimulus is coded in a way that there are 3 sets of dots, whose
+% positions are calculated randomly each for the first three frames, and 
+% every set of dots is "reshuffled" (noise dots) and moved (signal dots)
+% every third frame, depending on the positions of its dots three frames
+% previous.
 % 
 % Neb to Maria: I have added extra parameters to this function (detailed
 % below). The y-movement code that I have added works like this:
@@ -104,82 +107,91 @@ function [xy,coherence_frame,mean_coherence,pre_incoh_mo_coh,blocks_shuffled] = 
 %                     before a step occurs
 %
 %%% Input (continued, but for Y movement)
-%   mean_vcoh:       proportion of dots you want to move vertically
+%   mean_vcoh       = proportion of dots you want to move vertically
 %
-%   mean_vcoh_sd:    the standard deviation of mean_coh
+%   mean_vcoh_sd    = the standard deviation of mean_coh
 %
-%   mean_vfreq:      mean frequency of vertical motion periods (as a *number
-%                   per block*, e.g. if mean_freq == 5, then on average 
-%                   there will be 5 vertical motion periods per block)
+%   mean_vfreq      = mean frequency of vertical motion periods (as a *number
+%                     per block*, e.g. if mean_freq == 5, then on average 
+%                     there will be 5 vertical motion periods per block)
 %                   
-%   mean_vfreq_sd:   the standard deviation of mean_freq
+%   mean_vfreq_sd   = the standard deviation of mean_freq
 
-%   mean_vlength:    mean length of vertical motion periods *in frames*
+%   mean_vlength    = mean length of vertical motion periods *in frames*
 
-%   mean_vlength_sd: the standard deviation of mean_length
+%   mean_vlength_sd = the standard deviation of mean_length
 
-%   step_v:           speed of vertical movement *in pixels/frame*
+%   step_v          = speed of vertical movement *in pixels/frame*
 
-%   ap_radius:      radius of aperture (used to return dots if they move
-%                   out of annulus)
-%
+%   ap_radius       = radius of aperture (used to return dots if they move
+%                     out of annulus)
+% 
 % Output:
-% xy                - 2xNdxf matrix, where first row is x position and,
+% xy                = 2xNdxf matrix, where first row is x position and,
 %                     second row is y position for number of dots (Nd) for
 %                     each frame (f) (therefore EACH DOT has its OWN X/Y
 %                     coordinates for EACH frame)
-% coherence_frame   - vector with coherence
+% coherence_frame   = vector with coherence
 %                     values during incoherent and coherent motion periods
 %                     for each frame
-% mean_coherence    - vector of zeros for incoherent motion periods and the level of
+% mean_coherence    = vector of zeros for incoherent motion periods and the level of
 %                     coherence at periods of coherent motion for each frame
 %                     (for continuous task version only)
-% pre_incoh_mo_coh  - vector with incoherent motion frames for incoherent
+% pre_incoh_mo_coh  = vector with incoherent motion frames for incoherent
 %                     motion periods before coherent motion periods during
 %                     discrete trials
+% blocks_shuffled   = vector, only returned for continuous trials (if
+%                       discrete, returns empty vector i.e. []) 
 
 % Maria Ruesseler, University of Oxford, 2018
 
-%
+
+
 % here we pre-allocate frames 
 pre_incoh_mo_coh = [];
 
-if discrete_trials == 1 % if we have discrete trials
+% Neb note to self: remember to check if discrete_trials == 2 is even set
+% anymore (I just remember it being either 0 or 1, always)
+
+if discrete_trials == 1 % if we are moving dots for discrete trials
     blocks_shuffled = [];
     xy = zeros(2,Nd,total_frames); % set up a 3D (2xNdxtotal_frames) matrix
                                    % for x-y positions, which will be part
                                    % of output
     
     % pre_allocate frames for incoh motion before actual stim starts
-    
     pre_incoh_mo_coh = zeros(pre_incoh_mo,1);
 
-    for i = 1:3 % random dot location for first frame of each dot set
-        xy(:,:,i) = xypos(Nd, ap_radius); % use xypos function (defined below)
+    for i = 1:3 % random dot positions for first frame of each dot set
+        xy(:,:,i) = xypos(Nd, ap_radius); % create random positions 
+                                          % (xypos() function defined 
+                                          % below)
     end
 elseif discrete_trials == 2 
      blocks_shuffled = [];
      xy = zeros(2,Nd,total_frames);
     
     % pre_allocate frames for incoh motion before actual stim starts
-    
     pre_incoh_mo_coh = zeros(pre_incoh_mo,1);
-    
     
     for i = 1:3 % random dot location for first frame of each dot set
         xy(:,:,i) = xypos(Nd, ap_radius);
     end
 
-    % Neb: comment this below
+    % create coherence vectors (i.e. vectors which are as long as the frame
+    % length of either coherent or incoherent motion periods and contain
+    % the coherence value at every frame)
     [disc_coherence_vec] = calculate_coherence_vec(total_frames,sd_duration(2),mean_duration(2),coherence_sd(2),coherence_list(trial),[], [], stim_function); 
     [disc_incoherence_vec] = calculate_coherence_vec(pre_incoh_mo,sd_duration(1),mean_duration(1),coherence_sd(1),0,[], [], stim_function); 
      
-     discrete_trial_vec = [disc_incoherence_vec; disc_coherence_vec ];
-else % continuous rdk
+    % combine both into one vector
+    discrete_trial_vec = [disc_incoherence_vec; disc_coherence_vec];
+else % if we are moving dots for continuous trials
     xy = zeros(2,Nd,total_frames); % simply set the x-y matrix to all zeroes (for now)
 end % diskreite trials
 
-idx = 1; % index to loop through incoherent  motion periods (first frame of incoherent motion period)
+idx = 1; % index to loop through incoherent motion periods (first frame of
+         % incoherent motion period)
 tr = 1;  % index to loop through coherent motion periods
 
 % design filter to lowpass filter noise 
@@ -187,11 +199,11 @@ tr = 1;  % index to loop through coherent motion periods
 ft = designfilt('lowpassfir', 'PassbandFrequency', passbandfreq, 'StopbandFrequency', stopbandfreq,...
     'PassbandRipple', passrip, 'StopbandAttenuation', stopbandatten, 'SampleRate', framerate);
 
-
-% now we calculate dot positions first for continous trials 
+% now we calculate which frames have coherent and incoherent motion
+% (continous trials only)
 if ~discrete_trials
     if noise == 0 % if we are not generating a noise vector for replacing coherence motion after button press
-        for i = 1 : numel(ITIS_vec) % loop through incoherent motion periods of a block
+        for i = 1:numel(ITIS_vec) % loop through incoherent motion periods of a block
             incoh_filtered = calculate_coherence_vec(ITIS_vec(i),sd_duration(1),mean_duration(1),...
                 coherence_sd(1),0,ft, noise_amplitude,...
                 noise_function);
@@ -250,7 +262,7 @@ if discrete_trials > 0 % but if we have discrete trials...
     total_frames = total_frames + pre_incoh_mo; 
 end 
 
-%% Vertical motion code
+%% Vertical motion code (Maria, you should read below this--this is what I wrote)
 
 block_length = size(xy, 3); % get total number of frames in block
 coherence_v = normrnd(mean_vcoh, mean_vcoh_sd); % get coherence for these VMPs
@@ -294,6 +306,8 @@ for i = 1:size(iti, 1)
         % from our current ITI to the next one (if it exists). This helps
         % always balance (algebraically) the length of one ITI with the one
         % coming after it
+        % Neb: might have to change this (i.e. don't "make up" for 
+        % difference in length, because it could bias the experiments
         iti(i+1, 1) = iti(i+1, 1) + (length_decided - iti_mean_frames);
     end
 end
@@ -316,6 +330,7 @@ for i = 1:number_vmps
 end
 
 %% LOOPING THROUGH FRAMES to SET DOT X-Y POS'N FOR EACH FRAME %%%
+
 for f = 1:total_frames
     if discrete_trials == 1
         if f <= pre_incoh_mo % incoherent motion at start of trial with certain sd
@@ -409,11 +424,16 @@ for f = 1:total_frames
     end % if dots moved outside apperture
 end % loop through frames
 
-end % function
+end % main function
 
 %% additional functions
 % xypos function - creates randomised x and y coordinates for n number of
-% dots, for a given aperture radius r 
+% dots, for a given aperture radius r. It does this by giving each dot a
+% random radius (between 0 and r) and a random angle (between 0 and 2pi
+% radians, which corresponds to between 0 and 360 degrees). Then, it uses
+% trigonometric functions through the Pythagorean theorem to convert these
+% to X/Y positions and assign them to the dot.
+
 % Returns a 2xn double, with rows for x and y coordinates, and one column 
 % for each dot
 
