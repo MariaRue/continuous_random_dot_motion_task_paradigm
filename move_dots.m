@@ -1,19 +1,23 @@
-function [xy,coherence_frame,mean_coherence,pre_incoh_mo_coh,blocks_shuffled] = ...
-    move_dots(discrete_trials,trial,total_frames,ap_radius,...
-    coherence_sd,direction_org,step,Nd,pre_incoh_mo,...
-    mean_coherence,blocks_coherence_cells,coherence_frame,...
-    coherence_list,ITIS_vec,integration_long,noise,passbandfreq,...
-    stopbandfreq,passrip,stopbandatten,framerate,noise_amplitude,...
-    mean_duration,sd_duration,noise_function,stim_function, mean_vcoh, ...
-    mean_vcoh_sd, mean_vfreq, mean_vfreq_sd, mean_vlength, mean_vlength_sd, ...
-    step_v)
+function [xy, coherence_frame, mean_coherence, pre_incoh_mo_coh, ...
+    blocks_shuffled] = move_dots(S, discrete_trials, trial, ...
+    total_frames, ap_radius, coherence_sd, direction_org, step, Nd, ...
+    pre_incoh_mo, mean_coherence, blocks_coherence_cells, ...
+    coherence_frame, coherence_list, ITIS_vec, integration_long, noise, ...
+    passbandfreq, stopbandfreq, passrip, stopbandatten, framerate, ...
+    noise_amplitude, mean_duration, sd_duration, noise_function, ...
+    stim_function, mean_vcoh, mean_vcoh_sd, mean_vfreq, mean_vfreq_sd, ...
+    mean_vlength, mean_vlength_sd, step_v)
 
 % This function creates the dots' X/Y positions for discrete trials or 
 % continuous blocks of motion and saves those coordinates for *each* frame.
-% THus, every dot has its own X/Y coordinates for each frame, and
+% Thus, every dot has its own X/Y coordinates for each frame, and
 % all of this is saved in the matrix 'xy' which is output. This matrix is
 % then used to render all the dots in either discrete_rdk_trials_training
 % (when doing discrete trials) or present_rdk (when doing continous trials)
+%
+% NB. The two coherences (for horizontal movement and vertical movement)
+% added together cannot be more than 1, as then you get diagonal movement,
+% which is undesired.
 %
 % Two types of dots: SIGNAL dots (which move in a specific direction during
 % a trial, i.e. during "coherence") and NOISE dots (which just move
@@ -105,7 +109,10 @@ function [xy,coherence_frame,mean_coherence,pre_incoh_mo_coh,blocks_shuffled] = 
 %                     drawing steps from an exponential function when
 %                     coherence values change, this is the mean duration
 %                     before a step occurs
-%
+% sd_duration       - ???
+% noise_function    - ???
+% stim_function     - ???
+
 %%% Input (continued, but for Y movement)
 %   mean_vcoh       = proportion of dots you want to move vertically
 %
@@ -131,9 +138,11 @@ function [xy,coherence_frame,mean_coherence,pre_incoh_mo_coh,blocks_shuffled] = 
 %                     second row is y position for number of dots (Nd) for
 %                     each frame (f) (therefore EACH DOT has its OWN X/Y
 %                     coordinates for EACH frame)
-% coherence_frame   = vector with coherence
-%                     values during incoherent and coherent motion periods
-%                     for each frame
+% coherence_frame   = vector, as long as the entire task (each cell
+%                       represents a different frame) with each cell having
+%                       a coherence value (i.e. this describes the
+%                       coherences in all frames, both for coherent and
+%                       incoherent motion)
 % mean_coherence    = vector of zeros for incoherent motion periods and the level of
 %                     coherence at periods of coherent motion for each frame
 %                     (for continuous task version only)
@@ -181,8 +190,8 @@ elseif discrete_trials == 2
     % create coherence vectors (i.e. vectors which are as long as the frame
     % length of either coherent or incoherent motion periods and contain
     % the coherence value at every frame)
-    [disc_coherence_vec] = calculate_coherence_vec(total_frames,sd_duration(2),mean_duration(2),coherence_sd(2),coherence_list(trial),[], [], stim_function); 
-    [disc_incoherence_vec] = calculate_coherence_vec(pre_incoh_mo,sd_duration(1),mean_duration(1),coherence_sd(1),0,[], [], stim_function); 
+    [disc_coherence_vec] = calculate_coherence_vec(total_frames,sd_duration(2),mean_duration(2),coherence_sd(2),coherence_list(trial),[], [], stim_function, S.vp.min_duration, S.vp.max_duration); 
+    [disc_incoherence_vec] = calculate_coherence_vec(pre_incoh_mo,sd_duration(1),mean_duration(1),coherence_sd(1),0,[], [], stim_function, S.vp.min_duration, S.vp.max_duration); 
      
     % combine both into one vector
     discrete_trial_vec = [disc_incoherence_vec; disc_coherence_vec];
@@ -204,17 +213,21 @@ ft = designfilt('lowpassfir', 'PassbandFrequency', passbandfreq, 'StopbandFreque
 if ~discrete_trials
     if noise == 0 % if we are not generating a noise vector for replacing coherence motion after button press
         for i = 1:numel(ITIS_vec) % loop through incoherent motion periods of a block
+            % generate an incoherence vector (i.e. a vector containing a
+            % coherence value per frame of current iteration of incoherent
+            % motion period) with certain mean coherence, sd, etc. which we
+            % set
             incoh_filtered = calculate_coherence_vec(ITIS_vec(i),sd_duration(1),mean_duration(1),...
                 coherence_sd(1),0,ft, noise_amplitude,...
-                noise_function);
+                noise_function, S.vp.min_duration, S.vp.max_duration);
 
             % get idx of last frame of this period of incoherent motion
             end_of_incoh_mot = idx + ITIS_vec(i)-1;
             
             % set incoherent motion period in mean_coherence vector to a 
             % mean coherence of 0
-            mean_coherence(idx : end_of_incoh_mot)= zeros(ITIS_vec(i),1); % incoh_motion mean for ITIS interval
-            blocks_shuffled(idx : end_of_incoh_mot)= zeros(ITIS_vec(i),1);
+            mean_coherence(idx:end_of_incoh_mot)= zeros(ITIS_vec(i),1); % incoh_motion mean for ITIS interval
+            blocks_shuffled(idx:end_of_incoh_mot)= zeros(ITIS_vec(i),1);
             % fill the same epoch with the filtered incoherent motion in 
             % the coherencne_frame vector
             coherence_frame(idx:end_of_incoh_mot) = incoh_filtered;
@@ -225,31 +238,30 @@ if ~discrete_trials
             % calculate last idx of coherent motion period
             % last_coh_mot_f = first_coh_mot_f + integration_long -1;
             
+            %%% ADD COHERENT MOTION PERIOD AFTER EACH ITI (except last) %%%
             if i < numel(ITIS_vec) % if we are not in last incoherent motion period
-                % before block ends add coherent motion period onto last incoherent motion period
-
+                % before block ends, add coherent motion period right after
+                % last incoherent motion period
                 mean_coh_vec = ...
-                    calculate_coherence_vec(integration_long+1,sd_duration(2),mean_duration(2),coherence_sd(2),...
-                    blocks_coherence_cells(tr),[], [], stim_function);
+                    calculate_coherence_vec(integration_long+1, ...
+                    sd_duration(2), mean_duration(2), coherence_sd(2), ...
+                    blocks_coherence_cells(tr), [], [], stim_function, S.vp.min_duration, S.vp.max_duration);
 
+                % last frame of last coherent motion period (just added)
                 last_coh_mot_f = first_coh_mot_f + length(mean_coh_vec) -1;
                 
-                %mean_coherence(first_coh_mot_f :last_coh_mot_f )= mean_coh_vec;
-                coherence_frame(first_coh_mot_f:last_coh_mot_f)= mean_coh_vec;
-                mean_coherence(first_coh_mot_f :last_coh_mot_f )= zeros(length(mean_coh_vec),1)+ blocks_coherence_cells(tr);
-                blocks_shuffled(first_coh_mot_f :last_coh_mot_f )= zeros(length(mean_coh_vec),1) + tr; 
-                %      coherence_frame(first_coh_mot_f:last_coh_mot_f)= blocks_coherence_cells(tr);
+                % update output variables with adjustments just made
+                coherence_frame(first_coh_mot_f:last_coh_mot_f) = mean_coh_vec;
+                mean_coherence(first_coh_mot_f:last_coh_mot_f) = zeros(length(mean_coh_vec),1)+ blocks_coherence_cells(tr);
+                blocks_shuffled(first_coh_mot_f:last_coh_mot_f) = zeros(length(mean_coh_vec),1) + tr; 
             end
-            %
-            %
             idx = last_coh_mot_f + 1; % update first frame of next incohrent motion period
             tr = tr + 1; % update trial for next coherent motion period
         end
-        %
     else % if creating noise vector from which we draw frames when participant has pressed button
-        noise_vec = calculate_coherence_vec(ITIS_vec(1),sd_duration(1),mean_duration(1),...
-            coherence_sd(1),0,ft, noise_amplitude,...
-            noise_function);
+        noise_vec = calculate_coherence_vec(ITIS_vec(1),sd_duration(1), ...
+            mean_duration(1), coherence_sd(1), 0, ft, noise_amplitude, ...
+            noise_function, S.vp.min_duration, S.vp.max_duration);
 
         mean_coherence = zeros(ITIS_vec(1),1);
         coherence_frame = noise_vec;
@@ -266,7 +278,6 @@ end
 
 block_length = size(xy, 3); % get total number of frames in block
 coherence_v = normrnd(mean_vcoh, mean_vcoh_sd); % get coherence for these VMPs
-% disp(['Coherence: ' num2str(coherence)]);
 
 frame_vector = zeros(1, block_length); % create initial frame vector
 
@@ -319,8 +330,12 @@ for i = 1:number_vmps
     last_frame = first_frame + vmp(i, 1); % determine last frame of VMP
     % assign frames to vector, making them either upwards-moving (value 1)
     % or downwards-moving (value -1) w/ equal probability
+    % NB. *Ensure* that the proportion of VMP dots (derived from noise
+    % dots) out of total dots is *the same* as the proportion of HMP
+    % (coherent motion) dots out of total dots --> could fall into this
+    % trap!
     if randi(2) == 1 % going up
-        frame_vector(1,first_frame:last_frame) = 1; % -1 = going up 
+        frame_vector(1,first_frame:last_frame) = -1; % -1 = going up 
     else % going down
         frame_vector(1,first_frame:last_frame) = 1; % 1 = going down (remember the Y-axis on computers increases downwards)
     end
@@ -330,6 +345,8 @@ for i = 1:number_vmps
 end
 
 %% LOOPING THROUGH FRAMES to SET DOT X-Y POS'N FOR EACH FRAME %%%
+
+debug_meme = zeros(1, total_frames); % preallocate
 
 for f = 1:total_frames
     if discrete_trials == 1
@@ -357,17 +374,31 @@ for f = 1:total_frames
     % direction or randomly
     coh_prob = rand(1,Nd);
     
-    % index vectors to noise and signal dots
+    % index vectors to noise, signal_x, and signal_y dots
+    % NB. signal_x and signal_y dots are *not* allowed to be the same dots
     index_signal_x = find(coh_prob <= abs(coherence));
-    index_signal_y = find(coh_prob <= abs(coherence_v));% return an array of 
+    % ensure (horizontal coherence + vertical coherence) is always <= 1
+    if (abs(coherence) + abs(coherence_v) > 1)
+        % if it's > 1, then vertical coherence must be exactly the
+        % difference between horizontal coherence and 100%
+        new_coherence_v = 1 - abs(coherence);
+        coherence_v = (coherence_v/abs(coherence_v))*new_coherence_v;
+    end
+    
+    debug_meme(1, f) = coherence_v;
+    
+    % select vertical dots (which must be distinct from the horizontal
+    % movement dots, otherwise you get diagonal movement)
+    rescaled = 2*bsxfun(@minus, coh_prob, abs(coherence));
+    index_signal_y = find(coh_prob > abs(coherence) & rescaled <= abs(coherence_v));% return an array of 
     % which dots will be signal dots (those whose coh_prob is less or equal
     % to specified coherence for this trial, which comes from parameters)
-    index_noise_x = coh_prob > abs(coherence);
-    index_noise_y = coh_prob > abs(coherence_v);
+    index_noise = coh_prob > abs(coherence);
+    %index_noise_y = (coh_prob > abs(coherence) & rescaled > abs(coherence_v));
     
     %%% MOVE DOTS %%%
     % Move noise dots
-    xy(:,index_noise_x,f) = xypos(sum(index_noise_x), ap_radius);
+    xy(:,index_noise,f) = xypos(sum(index_noise), ap_radius);
     
     % Move signal dots - but only if we are above 3 frames because every
     % set of dots is shown only on every 3rd frame, otherwise all dots move
@@ -375,8 +406,8 @@ for f = 1:total_frames
     % positions of the one three frame previous.
     if f > 3
         xy(1,index_signal_x,f) = xy(1,index_signal_x,f-3) + (step * x_dir * 3); % change X position of each signal dot
-        xy(2,index_signal_x,f) = xy(2,index_signal_x,f-3); % maintain Y position...
-        xy(2,index_signal_y,f) = xy(2,index_signal_y,f-3) + (step * frame_vector(1,f) * 3); % ...unless you're moving vertically
+        xy(2,index_signal_x,f) = xy(2,index_signal_x,f-3); % maintain Y position for horizontal dots...
+        xy(2,index_signal_y,f) = xy(2,index_signal_y,f-3) + (step * frame_vector(1,f) * 3); % but not for vertical dots
     else
         xy(:,index_signal_x,f) = xypos(numel(index_signal_x), ap_radius); % set up dots' position in first three frames
     end % if f > 3
@@ -388,31 +419,32 @@ for f = 1:total_frames
     
     % calculate distance to aperture centre
     distance_x_centre = sqrt(xy(1,index_signal_x,f).^2 + xy(2,index_signal_x,f).^2);
+    distance_y_centre = sqrt(xy(1,index_signal_y,f).^2 + xy(2,index_signal_y,f).^2);
     
     % get INDICES OF signal dots that have a distance greater than the 
     % radius meaning that they are outside the aperture
     idx_dist_x = index_signal_x(distance_x_centre >= ap_radius);
-    idx_dist_y = index_signal_y(distance_x_centre >= ap_radius);
-    tangent_dots_x = zeros(2, size(idx_dist_x, 2));
+    idx_dist_y = index_signal_y(distance_y_centre >= ap_radius);
+    %tangent_dots_x = zeros(2, size(idx_dist_x, 2));
     
-    if ~isempty(idx_dist_x) % if dots moved outside apperture
+    if ~isempty(idx_dist_x) % if X dots moved outside apperture
         % replex y and x coordinates of the dots to a place on the opposite
         % site of the aperture
         
         % need this for division below...
-        ap_radius_matrix = zeros(1, size(distance_x_centre, 2));
-        ap_radius_matrix(1, 1:size(distance_x_centre)) = ap_radius;
+        % ap_radius_matrix = zeros(1, size(distance_x_centre, 2));
+        % ap_radius_matrix(1, 1:size(distance_x_centre)) = ap_radius;
         
         % calculate tangent equivalents for each dot
-        tangent_dots_x(1,:) = (ap_radius_matrix ./ distance_x_centre(1, idx_dist_x)) .* xy(1, idx_dist_x, f); % X
-        tangent_dots_x(2,:) = (ap_radius_matrix ./ distance_x_centre(1, idx_dist_x)) .* xy(2, idx_dist_x, f); % Y
+        %tangent_dots_x(1,:) = (ap_radius_matrix ./ distance_x_centre(1, idx_dist_x)) .* xy(1, idx_dist_x, f); % X
+        %tangent_dots_x(2,:) = (ap_radius_matrix ./ distance_x_centre(1, idx_dist_x)) .* xy(2, idx_dist_x, f); % Y
         
-        % and reflext to other side
-        xy(1, idx_dist_x, f) = -tangent_dots_x(1, :); % reflect X
-        xy(2, idx_dist_x, f) = -tangent_dots_x(2, :); % reflect Y
+        % and reflect to other side
+        %xy(1, idx_dist_x, f) = -tangent_dots_x(1, :); % reflect X
+        %xy(2, idx_dist_x, f) = -tangent_dots_x(2, :); % reflect Y
         
-%         xy(2,idx_dist_x,f) = 2 .* ap_radius .* rand(size(idx_dist_x)) - ap_radius;
-%         xy(1,idx_dist_x,f) = sqrt((ap_radius^2) - (xy(2,idx_dist_x,f).^2) );
+         xy(2,idx_dist_x,f) = 2 .* ap_radius .* rand(size(idx_dist_x)) - ap_radius;
+         xy(1,idx_dist_x,f) = sqrt((ap_radius^2) - (xy(2,idx_dist_x,f).^2) );
         
         % move signal dots back into aperture
         xy(1,idx_dist_x,f) = xy(1,idx_dist_x,f) - rand(size(idx_dist_x)) .* step;
@@ -420,6 +452,30 @@ for f = 1:total_frames
         % needs to be mirrored if coherence is positive
         if x_dir > 0 % | frame_vector(1, f) < 0
             xy(1,idx_dist_x,f) = - xy(1,idx_dist_x,f);
+        end
+    end % if dots moved outside apperture
+    
+    if ~isempty(idx_dist_y) % if Y dots moved outside apperture
+        % replex y and x coordinates of the dots to a place on the opposite
+        % site of the aperture
+        
+        % calculate tangent equivalents for each dot
+        %tangent_dots_x(1,:) = (ap_radius_matrix ./ distance_x_centre(1, idx_dist_x)) .* xy(1, idx_dist_x, f); % X
+        %tangent_dots_x(2,:) = (ap_radius_matrix ./ distance_x_centre(1, idx_dist_x)) .* xy(2, idx_dist_x, f); % Y
+        
+        % and reflect to other side
+        %xy(1, idx_dist_x, f) = -tangent_dots_x(1, :); % reflect X
+        %xy(2, idx_dist_x, f) = -tangent_dots_x(2, :); % reflect Y
+        
+        xy(1,idx_dist_y,f) = 2 .* ap_radius .* rand(size(idx_dist_y)) - ap_radius; % assign random X value
+        xy(2,idx_dist_y,f) = sqrt((ap_radius^2) - (xy(1,idx_dist_y,f).^2) ); % place on edge of ring
+        
+        % move signal dots back into aperture
+        xy(2,idx_dist_y,f) = xy(2,idx_dist_y,f) - rand(size(idx_dist_y)) .* step_v;
+        
+        % needs to be mirrored if coherence is positive
+        if frame_vector(1, f) > 0
+            xy(2,idx_dist_x,f) = - xy(2,idx_dist_x,f);
         end
     end % if dots moved outside apperture
 end % loop through frames
