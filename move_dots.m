@@ -1,4 +1,4 @@
-function [xy, coherence_frame, mean_coherence, pre_incoh_mo_coh, ...
+function [xy, coherence_frame, mean_coherence, mean_coherence_v, pre_incoh_mo_coh, ...
     blocks_shuffled] = move_dots(S, discrete_trials, trial, ...
     total_frames, ap_radius, coherence_sd, direction_org, step, Nd, ...
     pre_incoh_mo, mean_coherence, blocks_coherence_cells, ...
@@ -146,6 +146,7 @@ function [xy, coherence_frame, mean_coherence, pre_incoh_mo_coh, ...
 % mean_coherence    = vector of zeros for incoherent motion periods and the level of
 %                     coherence at periods of coherent motion for each frame
 %                     (for continuous task version only)
+% mean_coherence_v  = 
 % pre_incoh_mo_coh  = vector with incoherent motion frames for incoherent
 %                     motion periods before coherent motion periods during
 %                     discrete trials
@@ -192,7 +193,7 @@ elseif discrete_trials == 2
     % the coherence value at every frame)
     [disc_coherence_vec] = calculate_coherence_vec(total_frames,sd_duration(2),mean_duration(2),coherence_sd(2),coherence_list(trial),[], [], stim_function, S.vp.min_duration, S.vp.max_duration); 
     [disc_incoherence_vec] = calculate_coherence_vec(pre_incoh_mo,sd_duration(1),mean_duration(1),coherence_sd(1),0,[], [], stim_function, S.vp.min_duration, S.vp.max_duration); 
-     
+    
     % combine both into one vector
     discrete_trial_vec = [disc_incoherence_vec; disc_coherence_vec];
 else % if we are moving dots for continuous trials
@@ -274,12 +275,14 @@ if discrete_trials > 0 % but if we have discrete trials...
     total_frames = total_frames + pre_incoh_mo; 
 end 
 
-%% Vertical motion code (Maria, you should read below this--this is what I wrote)
+%% Vertical motion code
 
+% set up variables
 block_length = size(xy, 3); % get total number of frames in block
 coherence_v = normrnd(mean_vcoh, mean_vcoh_sd); % get coherence for these VMPs
 
-frame_vector = zeros(1, block_length); % create initial frame vector
+% create initial frame vector (contains vertical coherence at each frame)
+frame_vector = zeros(1, block_length);
 
 %%% CALCULATE VERTICAL MOTION PERIODS (VMPs)
 % calculate amount of VMPs in this block (from distribution)
@@ -344,9 +347,15 @@ for i = 1:number_vmps
     first_frame = last_frame + iti(i+1,1) + 1;
 end
 
+% for debugging, remove otherwise
+frame_vector(1, 1:end) = 1;
+frame_vector = frame_vector.';
+% return vector to present_rdk()
+mean_coherence_v = frame_vector.';
+
 %% LOOPING THROUGH FRAMES to SET DOT X-Y POS'N FOR EACH FRAME %%%
 
-debug_meme = zeros(1, total_frames); % preallocate
+coherence_v_f = zeros(1, total_frames); % preallocate
 
 for f = 1:total_frames
     if discrete_trials == 1
@@ -385,14 +394,35 @@ for f = 1:total_frames
         coherence_v = (coherence_v/abs(coherence_v))*new_coherence_v;
     end
     
-    debug_meme(1, f) = coherence_v;
+    % for debugging, show us vertical coherence per frame
+    coherence_v_f(1, f) = coherence_v;
     
     % select vertical dots (which must be distinct from the horizontal
-    % movement dots, otherwise you get diagonal movement)
-    rescaled = 2*bsxfun(@minus, coh_prob, abs(coherence));
-    index_signal_y = find(coh_prob > abs(coherence) & rescaled <= abs(coherence_v));% return an array of 
-    % which dots will be signal dots (those whose coh_prob is less or equal
-    % to specified coherence for this trial, which comes from parameters)
+    % movement dots, otherwise you get diagonal movement).
+    % The proportion of non-horizontal dots which must be made to move
+    % vertically such that they are equal in amount to the ones moving
+    % horizontally is a = A/1-A (for proof, see Documentation) where A is
+    % the proportion of signal dots out of all dots (i.e. coherence)
+    a = coherence/(1-coherence);
+    % just in case somebody thought it would be funny to set coherence >
+    % 0.5 (the function above a = A/(1-A) surpasses 1 above A = 0.5)
+    if a > (1-coherence)
+        a = 1-coherence;
+        frame_vector(f) = a;
+    end
+    % create coh_prob values for vertical motion for only noise dots
+    coh_prob_v_unassigned = rand(1, Nd-length(index_signal_x));
+    % assign *each* dot a vertical coherence (1 for horizontal moving dots)
+    coh_prob_v = ones(1, Nd);
+    coh_prob_v(find(coh_prob > abs(coherence))) = coh_prob_v_unassigned;
+    % we now have a coh_prob_v vector (length = number of total dots) whose
+    % value at each index (dot) is either 1 (dot will be moving
+    % horizontally during some coherent motion periods) or some value less
+    % than one, which is used to see whether it will be moving vertically
+    % and in which vertical coherence periods.
+    % now retrieve the indices of vertical moving dots
+    index_signal_y = find(coh_prob_v <= abs(a));% return an array of 
+    % which dots will be vertical moving dots
     index_noise = coh_prob > abs(coherence);
     %index_noise_y = (coh_prob > abs(coherence) & rescaled > abs(coherence_v));
     
@@ -407,7 +437,7 @@ for f = 1:total_frames
     if f > 3
         xy(1,index_signal_x,f) = xy(1,index_signal_x,f-3) + (step * x_dir * 3); % change X position of each signal dot
         xy(2,index_signal_x,f) = xy(2,index_signal_x,f-3); % maintain Y position for horizontal dots...
-        xy(2,index_signal_y,f) = xy(2,index_signal_y,f-3) + (step * frame_vector(1,f) * 3); % but not for vertical dots
+        xy(2,index_signal_y,f) = xy(2,index_signal_y,f-3) + (step * frame_vector(f) * 3); % but not for vertical dots
     else
         xy(:,index_signal_x,f) = xypos(numel(index_signal_x), ap_radius); % set up dots' position in first three frames
     end % if f > 3
@@ -474,7 +504,7 @@ for f = 1:total_frames
         xy(2,idx_dist_y,f) = xy(2,idx_dist_y,f) - rand(size(idx_dist_y)) .* step_v;
         
         % needs to be mirrored if coherence is positive
-        if frame_vector(1, f) > 0
+        if frame_vector(f) > 0
             xy(2,idx_dist_x,f) = - xy(2,idx_dist_x,f);
         end
     end % if dots moved outside apperture
