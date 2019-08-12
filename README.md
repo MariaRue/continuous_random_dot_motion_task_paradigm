@@ -61,26 +61,32 @@ Their parameters are:
 
 When training subjects:
 
->> create_stimuli('parameter.csv', 0, <session>, 1, 0/1, 0, 0);
+> create_stimuli('parameter.csv', 0, <session>, 1, 0/1, 0, 0);
 
 When recording data (EEG and maybe Eyelink):
 
->> create_stimuli('parameter.csv', 0, <session>, 0, 0, 0, 0);
+> create_stimuli('parameter.csv', 0, <session>, 0, 0, 0, 0);
 
 ## Training participants
 This involves exposing participants to different forms of the task which become more difficult and more representative of the real task over time. An example training document (which helps you during training, especially with the respect to the code you need to run) can be found in *training_doc.docx*. The first two sessions are discrete-committed, then three (i.e. 3-5) are discrete-averaged, and the last seven (i.e. 6-12) are continuous-averaged.
 
 ## Code explanation
 As explained above, all tasks are composed of two types of periods: incoherent motion (i.e. **intertrial** periods, or ITIs) and coherent motion (i.e. **trial** periods). Sessions always start and end with incoherent motion.
+
 In coherent motion periods, some proportion of dots (determined by the coherence—for example, 0.3 coherence means 30% of dots) referred to as signal dots move in unison either to the left or to the right on average (as they can shift their direction during their movement). The participant must then integrate this motion, and correctly answer which direction they were moving in on average during the trial. In committed tasks (these are used just for doing the very beginning of the training, usually) these is just one set value of coherence (e.g. -0.6) for an entire coherent motion period, meaning some proportion of dots (e.g. here, 60%) move in one direction (here, left, because the coherence is negative). In averaged tasks, coherent motion periods have some mean (i.e. arithmetic average) coherence, and the actual coherence differs from frame to frame.
 
 In incoherent motion periods, the coherence is not zero; instead, it varies around a mean of zero over the incoherent motion periods (this is why you can see some coherence during incoherent motion when you run the task). In continuous tasks, ITIs are subdivided into “steps” each lasting a different amount of time (in frames), sampled from an exponential distribution*. Then, each “step” is assigned a coherence (i.e. each frame in that step has the same coherence, sampled from an exponential distribution*) such that the mean of the coherences of all the steps in an ITI is zero. Once we combine these ITIs with coherent motion periods, the resulting vector (called coherence_frame, see below) looks like this:
 
+![Image of Feedback](https://octodex.github.com/images/yaktocat.png)
+
 As you can see, there is one coherence value for each frame (any coherences below -1.0 and above 1.0 are treated as just being -1.0/1.0 respectively, as we can’t have more than 100% of signal dots moving in unison…). If you look closely, you may be able to notice that the mean coherence varies, because this is a graph of an entire block (~10,790 frames) and thus while most of the block is incoherent motion periods (mean coherence = 0) some parts of it have a higher or lower mean coherence.
+
 Notable variables:
 -	coherence_frame: (continuous tasks only) one exists for each block in a session (saved under S.coherence_frame{block}). Length equals total number of frames in block, and holds the coherence for each frame in the block. See above for an example plot.
-Vertical motion.
-In order to control for surprise, we must have a condition which is exactly equal to the experimental condition, but the participant is not required to respond, and is only required to integrate the movement to see whether they need to respond or not. We do this by making some dots move vertically during certain vertical motion periods, which are made and distributed just like coherent motion periods. Out of the subset of noise dots (non-horizontally moving dots) we take another subset of dots, called the vertically moving dots, and make them move up or down coherently depending on the period, very similarly to how signal dots are made to move left or right coherently during coherent motion periods. We split vertical and horizontal dots into two groups because if any dot moves both horizontally and vertically at the same time, it is moving diagonally. Also note that it is not possible to have a coherence above ½ (i.e. more than half of all dots are made to move horizontally during coherent motion periods) and have this control condition, because then some dots will necessarily be made both vertical and horizontal dots, and thus diagonal.
+
+*Addendum:* Vertical motion.
+In order to control for surprise, we must have a condition which is exactly equal to the experimental condition, but the participant is not required to respond, and is only required to integrate the movement to see whether they need to respond or not. We do this by making some dots move vertically during certain vertical motion periods, which are made and distributed just like coherent motion periods. Out of the subset of noise dots (non-horizontally moving dots) we take another subset of dots, called the vertically moving dots, and make them move up or down coherently depending on the period, very similarly to how signal dots are made to move left or right coherently during trials. We split vertical and horizontal dots into two groups because if any dot moves both horizontally and vertically at the same time, it moves diagonally. Also note that it is not possible to have a coherence above ½ (i.e. more than half of all dots are made to move horizontally during coherent motion periods) and have this control condition, because then some dots will necessarily be made both vertical and horizontal dots, and thus diagonal.
+
 The proportion of noise dots (i.e. non-signal dots, i.e. dots which will not ever be moving horizontally in the task) which must be assigned to vertical movement is a = A/1-A, where A is the proportion of all dots. Here is the proof:
 1.	If A is the proportion of signal dots, then 1-A is the proportion of noise dots.
 2.	Let a be the proportion of noise dots which are made vertically moving dots. Thus, the proportion of all dots which are vertically moving dots is a(1-A).
@@ -90,21 +96,22 @@ The proportion of noise dots (i.e. non-signal dots, i.e. dots which will not eve
 ## Function calls
 Below is a list of which functions are called in which order, and by what master function (could include being called by the unmoved mover: you!)
 1.	create_stimuli: Called by you, creates stimuli (by returning two structures)
-a.	readparamtxt: reads .csv file containing parameters
-b.	init_task_param: input structures from create_stimuli, returns both after modification
-c.	metpixperdeg: transforms visual degrees into pixels
-d.	calculate_epoch_lengths: calculates lengths of (and assigns each frame to) incoherent and coherent motion in a block
-e.	init_stimulus: returns sequences of x-y dot positions (for either type of trial) in S structure
-f.	move_dots: calculates and returns matrix of x-y positions for *each dot* in *every frame*
-i.	calculate_coherence_vec: calculates a ‘coherence vector’, a vector with length F (passed in as a frame number, e.g.
+  - readparamtxt: reads .csv file containing parameters
+  - init_task_param: input structures from create_stimuli, returns both after modification
+  - metpixperdeg: transforms visual degrees into pixels
+  - calculate_epoch_lengths: calculates lengths of (and assigns each frame to) incoherent and coherent motion in a block
+  - init_stimulus: returns sequences of x-y dot positions (for either type of trial) in S structure
+  - move_dots: calculates and returns matrix of x-y positions for *each dot* in *every frame*
+  - calculate_coherence_vec: calculates a ‘coherence vector’, a vector with length F (passed in as a frame number, e.g.
 2.	rdk_continuous_motion
-a.	EITHER discrete_rdk_trials_training (runs a discrete-trials task, for training)
-i.	PMF_RT_Plots: plots psychometric functions
-ii.	process_PMF_data: calculates statistics required for plots
+  - EITHER discrete_rdk_trials_training (runs a discrete-trials task, for training)
+    - PMF_RT_Plots: plots psychometric functions
+    - process_PMF_data: calculates statistics required for plots
 1.	EITHER cum_Gauss_PMF: calculates cumulative Gaussian values at each x-range value for plotting later on,
 2.	OR logist_PMF: calculates fitted PMF for each point in x-range
-b.	OR present_rdk (runs a continuous-trials task)
-i.	recalculate_xy_position: recalcs random dot positions after a response during a coherent motion period for the remainder of the period
+  - OR present_rdk (runs a continuous-trials task)
+    - recalculate_xy_position: recalcs random dot positions after a response during a coherent motion period for the remainder of the period
+
 ANALYSIS SCRIPTS
 Name	Result
 AR_analyse_ratios()	Returns proportion correct responses (right and left presses) per coherence, proportion misses (right and left sides) per coherence, and both of these collapsed over sides (i.e. per absolute coherence) , all per condition
