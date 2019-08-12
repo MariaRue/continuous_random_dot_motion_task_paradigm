@@ -6,6 +6,8 @@
 - <a href="#training-participants">Training participants</a>
 - <a href="#code-explanation">Code explanation</a>
 - <a href="#function-calls">Function calls</a>
+- <a href="#analysis-scripts">Analysis scripts</a>
+- <a href="#other">Other</a>
 
 ## Hardware requirements
 -	I/O port to talk to EEG computer
@@ -17,11 +19,9 @@
 -	If using EyeLink, latest EyelinkToolbox for PTB (link: http://psychtoolbox.org/docs/EyelinkToolbox)
 
 ## Summary
-These scripts run a random-dot motion perceptual decision-making task, modelled after Shadlen and Newsome (Shadlen and Newsome, 2001). Participants are required to fixate their gaze on a central “fix dot” in the task, while dots around this fix dot move either incoherently or coherently to varying extents. The participant then makes responses regarding the direction of movement of the dots (see below) by integrating perceptual information about dot movement.
+These scripts run a random-dot motion perceptual decision-making task, modelled after Shadlen and Newsome (2001) and O'Connell, Dockree, and Kelly (2012). Participants are required to fixate their gaze on a central “fix dot” in the task, while dots around this fix dot move either incoherently or coherently to varying extents. The participant then makes responses regarding the direction of movement of the dots (see below) by integrating perceptual information about dot movement.
 
-The dots in the task can be divided into two groups: **signal** and **noise dots.** Noise dots are those which move incoherently, meaning randomly in all directions. All dots are noise dots during incoherent motion periods, otherwise known as *intertrial intervals* (ITIs). Signal dots are those which move coherently (i.e. all together, in one direction) *horizontally* during coherent motion periods, and are a proportion of all dots (the rest remain noise dots). A simple diagram of the task is presented in figure 1. (**NB** that signal dots are only those dots which move coherently *but in a horizontal direction*: if we have dots which are moving coherently but in a vertical direction (see below—our lab has used this to control for surprise) we still classify them as “noise dots”, albeit the “vertically moving” subgroup of noise dots.)
-
-[Figure 1 - diagram of tasks]
+The dots in the task can be divided into two groups: **signal** and **noise dots.** Noise dots are those which move incoherently, meaning randomly in all directions. All dots are noise dots during incoherent motion periods, otherwise known as *intertrial intervals* (ITIs). Signal dots are those which move coherently (i.e. all together, in one direction) *horizontally* during coherent motion periods, and are a proportion of all dots (the rest remain noise dots). (**NB** that signal dots are only those dots which move coherently *but in a horizontal direction*: if we have dots which are moving coherently but in a vertical direction (see below—our lab has used this to control for surprise) we still classify them as “noise dots”, albeit the “vertically moving” subgroup of noise dots.)
 
 **Coherence** is the proportion of signal dots out of total dots: if coherence is 30%, then that proportion of dots is undergoing coherent motion, while the rest are still moving noisily (in random directions).
 
@@ -95,24 +95,25 @@ The proportion of noise dots (i.e. non-signal dots, i.e. dots which will not eve
 
 ## Function calls
 Below is a list of which functions are called in which order, and by what master function (could include being called by the unmoved mover: you!)
-1.	create_stimuli: Called by you, creates stimuli (by returning two structures)
-  - readparamtxt: reads .csv file containing parameters
-  - init_task_param: input structures from create_stimuli, returns both after modification
-  - metpixperdeg: transforms visual degrees into pixels
-  - calculate_epoch_lengths: calculates lengths of (and assigns each frame to) incoherent and coherent motion in a block
-  - init_stimulus: returns sequences of x-y dot positions (for either type of trial) in S structure
-  - move_dots: calculates and returns matrix of x-y positions for *each dot* in *every frame*
-  - calculate_coherence_vec: calculates a ‘coherence vector’, a vector with length F (passed in as a frame number, e.g.
-2.	rdk_continuous_motion
-  - EITHER discrete_rdk_trials_training (runs a discrete-trials task, for training)
-    - PMF_RT_Plots: plots psychometric functions
-    - process_PMF_data: calculates statistics required for plots
-1.	EITHER cum_Gauss_PMF: calculates cumulative Gaussian values at each x-range value for plotting later on,
-2.	OR logist_PMF: calculates fitted PMF for each point in x-range
-  - OR present_rdk (runs a continuous-trials task)
-    - recalculate_xy_position: recalcs random dot positions after a response during a coherent motion period for the remainder of the period
+1.	**create_stimuli**: Called by you, creates stimuli (by returning two structures)
+    - readparamtxt: reads .csv file containing parameters
+    - init_task_param: input structures from create_stimuli, returns both after modification
+    - metpixperdeg: transforms visual degrees into pixels
+    - calculate_epoch_lengths: calculates lengths of (and assigns each frame to) incoherent and coherent motion in a block
+    - init_stimulus: returns sequences of x-y dot positions (for either type of trial) in S structure
+    - move_dots: calculates and returns matrix of x-y positions for *each dot* in *every frame*
+    - calculate_coherence_vec: calculates a ‘coherence vector’, a vector with length F (passed in as a frame number, e.g.
+2.	**rdk_continuous_motion**: Called by you, runs the task
+    - EITHER discrete_rdk_trials_training (runs a discrete-trials task, for training)
+      - PMF_RT_Plots: plots psychometric functions
+      - process_PMF_data: calculates statistics required for plots
+        1.	EITHER cum_Gauss_PMF: calculates cumulative Gaussian values at each x-range value for plotting later on,
+        2.	OR logist_PMF: calculates fitted PMF for each point in x-range
+    - OR present_rdk (runs a continuous-trials task)
+      - recalculate_xy_position: recalculates random dot positions after a response during a trial for the remainder of the period
 
-ANALYSIS SCRIPTS
+## Analysis scripts
+This is a summary of all the analysis scripts that have been used for behavioural data.
 Name	Result
 AR_analyse_ratios()	Returns proportion correct responses (right and left presses) per coherence, proportion misses (right and left sides) per coherence, and both of these collapsed over sides (i.e. per absolute coherence) , all per condition
 ARts_analyse_rts()	Returns RTs (mean per subject, mean per session) per coherence, as well as log RTs, all per condition
@@ -120,12 +121,10 @@ AD_analyse_distributions()	Returns histograms (distributions) of RTs and log RTs
 AFH_analyse_FA_HR()	Returns scatterplots of FA (false alarm number) against HR (hit rate) per condition; each dot is one session, and same coloured dots come from the same subjects
 AW_analyse_waveforms()	Returns the mean waveform in the period leading up to a false alarm, per condition (period set by argument)
 
-## OTHER
--	Measure screen width and height, and participants’ distances to screen in millimetres
-o	Highly important, as the scripts are written in visual degrees (not pixels) to allow controlling for different screen sizes etc. across labs, so they use these parameters in millimetres to convert to pixels when creating stimuli
--	Explanation of triggers sent to EEG and Eyelink – when and what they mean
--	Explanation of main outputs
-Trigger	Meaning
+## Other
+-	Ensure you measure screen width and height, and participants’ distances to screen in millimetres. **You need to put these into the parameters.csv file** in order to control for differences in lab arrangements, screen sizes, etc. when it comes to task data.
+
+Here is an quick explanation of EEG/EyeLink triggers:
 201	Pressing “direction: right” button during coherent motion
 205	Pressing “direction: left” button during incoherent motion
 203	Participant missed coherent motion trial
@@ -134,8 +133,9 @@ Trigger	Meaning
 11	Sent every 70s
 210	Sent on last frame
 12	(?) Sent every minute
-23	Sent at beginning of incoherent motion
+23	Sent at beginning of incoherent motion (ITI)
 24	(?)
 
-## REFERENCES
-1.	Shadlen, Michael N. and William T. Newsome. Neural basis of a perceptual decision in the parietal cortex (area LIP) of the rhesus monkey. J Neurophysiol 86: 1916–1936, 2001
+## References
+1.	Shadlen, M. N. & Newsome, W. T. Neural basis of a perceptual decision in the parietal cortex (area LIP) of the rhesus monkey. *J. Neurophysiol.* **86**, 1916–1936 (2001)
+2.	O’Connell, R. G., Dockree, P. M., & Kelly, S. P. A supramodal accumulation-to-bound signal that determines perceptual decisions in humans. *Nat. Neurosci.* **15**, 1729-1735 (2012) 
