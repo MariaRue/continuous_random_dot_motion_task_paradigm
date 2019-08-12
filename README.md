@@ -77,7 +77,7 @@ In coherent motion periods, some proportion of dots (determined by the coherence
 
 In incoherent motion periods, the coherence is not zero; instead, it varies around a mean of zero over the incoherent motion periods (this is why you can see some coherence during incoherent motion when you run the task). In continuous tasks, ITIs are subdivided into “steps” each lasting a different amount of time (in frames), sampled from an exponential distribution*. Then, each “step” is assigned a coherence (i.e. each frame in that step has the same coherence, sampled from an exponential distribution*) such that the mean of the coherences of all the steps in an ITI is zero. Once we combine these ITIs with coherent motion periods, the resulting vector (called coherence_frame, see below) looks like this:
 
-![Image of Feedback](https://octodex.github.com/images/yaktocat.png)
+![Image of Feedback](/coherence_frame_example.png)
 
 As you can see, there is one coherence value for each frame (any coherences below -1.0 and above 1.0 are treated as just being -1.0/1.0 respectively, as we can’t have more than 100% of signal dots moving in unison…). If you look closely, you may be able to notice that the mean coherence varies, because this is a graph of an entire block (~10,790 frames) and thus while most of the block is incoherent motion periods (mean coherence = 0) some parts of it have a higher or lower mean coherence.
 
