@@ -114,27 +114,29 @@ Below is a list of which functions are called in which order, and by what master
 
 ## Analysis scripts
 This is a summary of all the analysis scripts that have been used for behavioural data.
-Name	Result
-AR_analyse_ratios()	Returns proportion correct responses (right and left presses) per coherence, proportion misses (right and left sides) per coherence, and both of these collapsed over sides (i.e. per absolute coherence) , all per condition
-ARts_analyse_rts()	Returns RTs (mean per subject, mean per session) per coherence, as well as log RTs, all per condition
-AD_analyse_distributions()	Returns histograms (distributions) of RTs and log RTs per condition
-AFH_analyse_FA_HR()	Returns scatterplots of FA (false alarm number) against HR (hit rate) per condition; each dot is one session, and same coloured dots come from the same subjects
-AW_analyse_waveforms()	Returns the mean waveform in the period leading up to a false alarm, per condition (period set by argument)
+
+1. AFR_analyse_FAR(): Returns the means and distributions of False Alarms (FAs) per subject, per condition, either (i) per unit total time or (ii) per unit ITI time.
+2. AFH_analyse_FA_HR(): Returns scatterplots of FA (false alarm number) against HR (hit rate) per condition; each dot is one session, and same coloured dots come from the same subjects
+3. AW_analyse_waveforms(): Returns the mean waveform in the period leading up to a false alarm, per condition (period set by argument)
+4. AR_analyse_ratios(): Returns proportion correct responses (right and left presses) per coherence, proportion misses (right and left sides) per coherence, and both of these collapsed over sides (i.e. per absolute coherence) , all per condition
+5. AD_analyse_distributions(): Returns histograms (distributions) of RTs and log RTs per condition
+6. ARts_analyse_rts(): Returns RTs (mean per subject, mean per session) per coherence, as well as log RTs, all per condition
 
 ## Other
 -	Ensure you measure screen width and height, and participants’ distances to screen in millimetres. **You need to put these into the parameters.csv file** in order to control for differences in lab arrangements, screen sizes, etc. when it comes to task data.
 
 Here is an quick explanation of EEG/EyeLink triggers:
-201	Pressing “direction: right” button during coherent motion
-205	Pressing “direction: left” button during incoherent motion
-203	Participant missed coherent motion trial
-202	Pressing “direction: right” button during incoherent motion
-206	Pressing “direction: left” button during incoherent motion
-11	Sent every 70s
-210	Sent on last frame
-12	(?) Sent every minute
-23	Sent at beginning of incoherent motion (ITI)
-24	(?)
+
+ - 201	Pressing “direction: right” button during coherent motion
+ - 205	Pressing “direction: left” button during incoherent motion
+ - 203	Participant missed coherent motion trial
+ - 202	Pressing “direction: right” button during incoherent motion
+ - 206	Pressing “direction: left” button during incoherent motion
+ - 11	Sent every 70s
+ - 210	Sent on last frame
+ - 12	(?) Sent every minute
+ - 23	Sent at beginning of incoherent motion (ITI)
+ - 24	(?)
 
 ## References
 1.	Shadlen, M. N. & Newsome, W. T. Neural basis of a perceptual decision in the parietal cortex (area LIP) of the rhesus monkey. *J. Neurophysiol.* **86**, 1916–1936 (2001)
