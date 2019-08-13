@@ -1,6 +1,6 @@
 function AR_analyse_ratios(type, int_control, input_cohs, ids)
 % PURPOSE: Analyses our data in a specific manner (gives psychometric
-% functions). See 'Input' for details.
+% functions) per condition. See 'Input' for details.
 %
 % Input
 %   type = a vector containing which analyses you wish to perform, 

@@ -89,10 +89,10 @@ for sub = 1:length( parts )
                 for condition = 1:4
                     FA_number = input_FHs_ordered{condition}(1, 2);
                     freq = "Common";
-                    cond_length = "Short";
+                    cond_length = "Long";
                     % change variables if needed
                     if condition == 1 | condition == 3
-                        cond_length = "Long";
+                        cond_length = "Short";
                     else
                         freq = "Rare";
                     end
@@ -122,7 +122,7 @@ elseif analysis == 1
     % set up factors (for the function after)
     % factors = table(
     % fit rm model
-    rm = fitrm(data_table, 'FA_number~freq*length', 'WithinDesign', );
+    rm = fitrm(data_table, 'FA_number~freq*length');
     loaded_data = freq_cond_anova;
 end
 

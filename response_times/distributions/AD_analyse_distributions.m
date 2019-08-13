@@ -1,11 +1,10 @@
-function AD_analyse_distributions(type, ids)
-% PURPOSE: This function presents the disribution of RTs, i.e. the amount
-% of a bin of RTs (in bins of bin_width) vs. each bin.
+function AD_analyse_distributions(ids, bins)
+% PURPOSE: This function presents the disribution of RTs as a histograms.
 
 % Input:
-%    type = 0 for normal RTs, 1 for log RTs
 %    ids = participant IDs whose data you wish to analyse (in the form of a
 %            vector, e.g. [1, 7, 34:39])
+%    bins = number of bins in histogram
 
 % Output: 
 %    None so far, just plots your data!
@@ -21,6 +20,6 @@ parts = scan_subs_sessions(ids);
 RT_distribution = AD_load_data(root, parts);
 
 %%% PLOT DATA %%%
-AD_plot_data(RT_distribution, type);
+AD_plot_data(RT_distribution, bins);
 
 end
