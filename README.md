@@ -113,7 +113,7 @@ Below is a list of which functions are called in which order, and by what master
       - recalculate_xy_position: recalculates random dot positions after a response during a trial for the remainder of the period
 
 ## Analysis scripts
-This is a summary of all the analysis scripts that have been used for behavioural data.
+This is a summary of all the analysis scripts that have been used for behavioural data. **NB**. These are the only scripts you need to run (i.e. of the form XX_analyse_YY)! Every other script in the repo is called by these master scripts.
 
 1. AFR_analyse_FAR(): Returns the means and distributions of False Alarms (FAs) per subject, per condition, either (i) per unit total time or (ii) per unit ITI time.
 2. AFH_analyse_FA_HR(): Returns scatterplots of FA (false alarm number) against HR (hit rate) per condition; each dot is one session, and same coloured dots come from the same subjects
