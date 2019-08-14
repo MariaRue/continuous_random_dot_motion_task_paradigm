@@ -44,6 +44,7 @@ create_stimuli(‘parameter.csv’, 0, 3, 0, 0, 0, 0);
 ~~~~
 
 Then, run the following lines *individually*. Each line runs the task for a different session (one each we created above). For the first line, you should expect *only* to have discrete trials and committed horizontal motion. For the second, discrete trials with averaged motion *and* vertical motion, and for the third, continuous trials with averaged motion *without* vertical motion.
+
 `rdk_continuous_motion(‘parameter.csv’, 1, 1, 1, 0, <id_you_used>, 0, 'n', 0, 0);`
 `rdk_continuous_motion(‘parameter.csv’, 1, 2, 1, 0, <id_you_used>, 0, 'n', 0, 0);`
 `rdk_continuous_motion(‘parameter.csv’, 0, 3, 1, 0, <id_you_used>, 0, 'n', 0, 1);`
