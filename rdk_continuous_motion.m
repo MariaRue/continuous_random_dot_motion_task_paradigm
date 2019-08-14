@@ -1,7 +1,6 @@
-function [S,D,tconst] = rdk_continuous_motion(paramstxt, training,session,rewardbar,annulus,subid,age,gender, feedback)
-%% NB. This now has a paramstxt parameter, so will have to be included each time.
+function [S,D,tconst] = rdk_continuous_motion(paramstxt, training, session, rewardbar, annulus, subid, age, gender, feedback)
+
 %% Neb: Also change flags for EEG and elink below (when calling present_rdk)! Important!
-%% Neb: Also, go to bottom of function and change flags when moving to desktop!
 
 % PURPOSE: This function is the one which actually runs the task to display
 % continous random dot stimuli, as determined by create_stimuli (which you 
@@ -39,9 +38,10 @@ function [S,D,tconst] = rdk_continuous_motion(paramstxt, training,session,reward
 % training  = (flag) if 1, fixdot is white during trials, otherwise no
 % session   = number indicating session 
 % rewardbar = 1 if displayed, 0 otherwise (passed on)
-% annulus   = 
+% annulus   = 0/1 if no/yes presence for annulus (empty ring around fixdot)
 % subid     = ID assigned to participant (as number), e.g. 4
 % age       = participant age
+% eeg       = 0 if you haven't got them connected, 1 if yes
 % feedback  = whether to show feedback after each block (0 no, 1 yes)
 
 %%-- Output --%% 
@@ -95,6 +95,9 @@ paths = readparamtxt(paramstxt, []);
 root_stim_file = paths.root_stim;
 % where you keep participants' output (i.e. behaviour)
 root_outfile = paths.root_output; 
+% do we have eeg and/or eyelink connected?
+eeg = paths.eeg;
+eyelink = paths.eyelink;
  
 %%%--- 1. Set up file paths; load and save files ---%%%
 infile = sprintf('sub%03.0f_sess%03.0f_stim.mat',subid,session); %updated input filename of subject and session
@@ -138,8 +141,7 @@ end % if file exists
 if discrete_trials % If function called to run with discrete trials...
     [D,S] = discrete_rdk_trials_training(S,tconst,rewardbar,training,outdir,outfile);
 else % ...otherwise, with continuous trials 
-    [S,D,tconst] = present_rdk(S, tconst, training,outdir,outfile,rewardbar,0,0,0,annulus, feedback); 
-    %% Change flags above (should be rewardbar,1,1,0, instead of 0,0,0 -> used for training)
+    [S,D,tconst] = present_rdk(S, tconst, training,outdir,outfile,rewardbar,eeg,eyelink,0,annulus, feedback); 
 end
 
 end
