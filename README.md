@@ -38,8 +38,11 @@ The scripts can run one of three different types of task: (1) **discrete-committ
   - **root_stim** and **root_output**: these are the paths to the folders where you want the code to output its stimulus (root_stim) and behavioural data (root_output) files.
 2. *Ensure the code runs well*. Set your parameter.csv **subid** to a random number you won't use again (e.g. 777) and **block_length** to 1. Then, create three test sessions (i.e. create stimulus files, one for each session) by running these lines of code (you can run them all together). Don't worry, this document explains what these functions are/do a bit further down, but just run them for now to ensure the code works well.
 > create_stimuli(‘parameter.csv’, 0, 1, 1, 1, 1, 0);
+
 > create_stimuli(‘parameter.csv’, 0, 2, 2, 0, 0, 1);
+
 > create_stimuli(‘parameter.csv’, 0, 3, 0, 0, 0, 0);
+
 Then, run the following lines *individually*. Each line runs the task for a different session (one each we created above). For the first line, you should expect only to have discrete trials and committed horizontal motion. For the second, discrete trials with averaged motion *and* vertical motion, and for the third, continuous trials with averaged motion *without* vertical motion.
 3. *Go through running_the_task.docx to see how we run the code.* This document contains a list of code lines you can use directly to run the code with different types of trials (e.g. discrete-committed, vertical/no vertical motion, etc.) both for training and actual experiment.
 
@@ -52,7 +55,7 @@ Only two functions are used to run the task. The first one creates a stimulus fi
 - Practically, we set up all stimuli files for all sessions before the participant has even arrived at the lab, so that they don't have to wait more than they have to.
 2.	**rdk_continuous_motion()** runs the task from a specific session (i.e. stimulus) file. It can modify the task to some limited extent (e.g. whether the fix dot turns white during trials, which is used during training) but most properties are found in the file.
 
-Their parameters are:
+Their arguments are:
 **create_stimuli**(paramstxt, debug, session, discrete_trials, integration_window, ordered_coherences, vert_motion)
 -	paramstxt: char array, filename of parameters file (default is ‘parameter.csv’)
 -	debug: flagged from 0-3, runs task with different settings to help debug
@@ -82,6 +85,8 @@ When training subjects:
 When recording data (EEG and maybe Eyelink):
 
 > create_stimuli('parameter.csv', 0, <session>, 0, 0, 0, 0);
+  
+Again, check running_the_task.docx to see how we run our code if you're confused.
 
 ## Training participants
 This involves exposing participants to different forms of the task which become more difficult and more representative of the real task over time. An example training document (which helps you during training, especially with the respect to the code you need to run) can be found in *training_doc.docx*. The first two sessions are discrete-committed, then three (i.e. 3-5) are discrete-averaged, and the last seven (i.e. 6-12) are continuous-averaged.
