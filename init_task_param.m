@@ -1,38 +1,48 @@
-function [S,tconst] = init_task_param (vpar,debug,discrete_trials,integration_window,ordered_coherences)
+function [S,tconst] = init_task_param (vpar,debug,discrete_trials,integration_window,ordered_coherences, vert_motion)
 
-% PURPOSE: This function is important for the initialisation of a session. It
-% inquies (?)
-% screen and computer parameters important for the screen settings in the task 
-% such as pixel size of screen and flip interval and saves it in the tconst structure. Sets
+% PURPOSE: This function is important for the initialisation of a session. 
+% It initiates (?) screen and computer parameters important for the screen
+% settings in the task such as pixel size of screen and flip interval and
+% saves it in the tconst structure. Sets
 % parameters and transforms parameters from the .csv file in units appropriate 
 % for PTB, i.e. transform visual degrees in pixels. All parameters more stimulus specfic, 
 % i.e. dot size, speed of dots etc. are kept in the structure S for Stimulus. 
-% It also keeps a copy of all initial parameters specified in the ..csv file under S.vp. 
+% It also keeps a copy of all initial parameters specified in the .csv file under S.vp. 
 %
 % Additionally, in this file, we initiate the metpixperdeg() function,
 % which converts visual degrees (found in the .csv parameters file) to
 % pixels, so that stimuli can be drawn on the screen.
 
 % Input: 
-% vpar = structure with all parameters in original units from .csv file 
-% debug                     -  0 : on any other computer tha mac full screen 
-%                                  window and framerate set to monitor refresh rate task 
-%                              1 : small window for debuging 
-%                              2 : full window but monitor refresh rate set to 60hz - use
-%                                  on mac 
-%                              3 : small window, refresh rate set to 60hz 
-% discrete_trials = 1 discrete trials, 0 continous rdk session 
-% integration_window = only for discrete rdk, defines length of stimulus
+%   vpar ---------- : structure with all parameters in original units from 
+%                       .csv file 
+%   debug ------- 0 : on any other computer tha mac full screen 
+%                       window and framerate set to monitor refresh rate task 
+%                 1 : small window for debuging 
+%                 2 : full window but monitor refresh rate set to 60hz. Use
+%                       use on a mac laptop (or windows surface)
+%                 3 : small window, refresh rate set to 60hz 
+%    discrete_trials: 1 discrete trials, 0 continous rdk session 
+% integration_window: only for discrete rdk, defines length of stimulus
 %                       shown, 1 means long integration, stimulus shown for a 
 %                       long period, 0 = short integration, stimulus shown
 %                       for short period 
-% ordered_coherences = see create_stimuli.m
+% ordered_coherences: see create_stimuli.m
 
-% Output: Returns two structures that are important to run task with
-% rdk_contionous_motion, namely:
-% S      = structure with stim paramaters, trial info, the field 'vp' has 
-%          a copy of all the parameters in their original units 
-% tconst = screen, PTB parameters 
+% Output: 
+%   (Returns two structures that are important to run task with
+%    rdk_contionous_motion, as follows)
+%   S ---- : structure with stim paramaters, trial info; the 'vp' field has 
+%              a copy of all the parameters in their original units 
+%   tconst : screen and PTB parameters, including
+%               - .winptr: the number of the screen on which the task will
+%                            be shown
+%               - .win: the window in which we will display the task
+%               - .framerate: obtains and holds the screen framerate
+%               - .flipint: flip interval
+%               - .pixperdeg: used to calculate how many pixels/degree to 
+%                               assign to dots (this is why visual degrees
+%                               are important!)
 
 % Maria Ruesseler, University of Oxford, 2018
 
@@ -65,20 +75,22 @@ screens = Screen('Screens');
 % get correct screen number for screen on which we want to show task
 tconst.winptr = max(screens);
 
-
+% confirm!
 disp('Screen is set up.');
 
 %%%%%% rewardbar parameters %%%%%% 
 S.x_rect_old = 0; % variable saves x position (in pixels) of how far reward bar was filled  
-S.coins_counter = 0; % counts how many pounds have been won within and across 
-%                       sessions, 0.15£ are added each time reward bar is filled up 
+S.coins_counter = 0; % counts how many pounds have been won within and  
+                     % across sessions, 0.15£ are added each time reward
+                     % bar is filled up
 %S.total_rect_x_size = 500; % length of reward bar in pixels 
 S.totalPointsbar = S.vp.trialsperpound .* S.vp.point(1); % points subject has to earn in order to win 0.15£
 S.totalPoints = 0; % total number of points earned so far - determining how far rewardbar will be filled up 
 
 %%%--- open window to get screen specific parameters ---%%%
 
-% dev_mode=1 puts window in one corner of screen for easier debugging
+%%% DEBUG SETTINGS %%%
+% Used for figuring out what went wrong when something goes wrong...
 S.debug = debug; 
 
 if debug == 1 
@@ -90,11 +102,13 @@ elseif debug == 2
     % is could approximation,3 if small window on screen, 2 if full screen
 elseif debug == 3 
     [tconst.win,tconst.rect]= PsychImaging('OpenWindow', tconst.winptr,S.grey,[0 0 1048 786]);
-    tconst.framerate = 60;
+    tconst.framerate = 59;
+    %% Neb: change above to 60 when on Mac
 else % opens window full screen for running task with participants 
     [tconst.win,tconst.rect]= PsychImaging('OpenWindow', tconst.winptr, S.grey);
     tconst.framerate = Screen('FrameRate',tconst.win); % get frame rate 
 end
+%%% END DEBUG SETTINGS %%%
 
 tconst.flipint = Screen ( 'GetFlipInterval' , tconst.win ); % get flip interval 
 
@@ -112,6 +126,14 @@ S.Nd = ceil(pi * (S.vp.ap_rad^2) * S.vp.density);
 % dotdiameter in pixels
 S.dotdiameter = tconst.pixperdeg * S.vp.dotsize; % dots in rdk 
 S.fixdiameter = tconst.pixperdeg .* S.vp.fixsize; % fix dot 
+if S.fixdiameter(1) > 20
+    S.fixdiameter(1) = 20; % max value is 20, screen too small (in mm) if >20
+    disp('Fix dot 1 (smaller circle) diameter too high! Check init_task_param().');
+end
+if S.fixdiameter(2) > 20
+    S.fixdiameter(2) = 20; % max value is 20, screen too small (in mm) if >20
+    disp('Fix dot 2 (larger circle) diameter too high! Check init_task_param().');
+end
 
 % all parameters for Screen FillOval to draw annulus around fix dot. 
 S.annulus = tconst.pixperdeg * S.vp.annulus; 
@@ -119,11 +141,11 @@ S.annulus = tconst.pixperdeg * S.vp.annulus;
 S.annulus_rect = [S.centre(1)-S.annulus, S.centre(2) - S.annulus, S.centre(1)+S.annulus, S.centre(2) + S.annulus]; % defining size and where annulus will be
 S.annulus_diameter = 2.*S.annulus; % defining diameter should help with speeed 
 
-S.targetdiameter = tconst.pixperdeg * S.vp.trgsize; % targets - not used in current version 
-% target location in pixel - not used in current version 
-S.target_location = S.vp.target_location * tconst.pixperdeg;
-% coordinates to draw target dots - not used in current version 
-S.target = [- S.target_location, S.target_location; 0 0];
+% S.targetdiameter = tconst.pixperdeg * S.vp.trgsize; % targets - not used in current version 
+% % target location in pixel - not used in current version 
+% S.target_location = S.vp.target_location * tconst.pixperdeg;
+% % coordinates to draw target dots - not used in current version 
+% S.target = [- S.target_location, S.target_location; 0 0];
 
 % size parameters of fixdot for training 
 S.linewidth = S.vp.linewidth .* tconst.pixperdeg; 
@@ -132,14 +154,14 @@ S.linesize = S.vp.linesize .* tconst.pixperdeg;
 % Neb: Triangles seem never to be used (maybe it's something left over 
 % from the past?) We should get rid of this code if that's true.
 
-% triangle for feedback 
-S.triangle_size = S.vp.triangle_size .* tconst.pixperdeg; 
-S.triangle_pen_width = S.vp.triangle_pen_width .* tconst.pixperdeg;
-
-% list of x/y positions to position triangle if trial has been missed 
-S.triangle_vector = [S.centre(1) - (S.triangle_size(1)/2), S.centre(2); ...
-                     S.centre(1) + (S.triangle_size(1)/2), S.centre(2); ...
-                     S.centre(1), S.centre(2) + S.triangle_size(2)];        
+% % triangle for feedback 
+% S.triangle_size = S.vp.triangle_size .* tconst.pixperdeg; 
+% S.triangle_pen_width = S.vp.triangle_pen_width .* tconst.pixperdeg;
+% 
+% % list of x/y positions to position triangle if trial has been missed 
+% S.triangle_vector = [S.centre(1) - (S.triangle_size(1)/2), S.centre(2); ...
+%                     S.centre(1) + (S.triangle_size(1)/2), S.centre(2); ...
+%                     S.centre(1), S.centre(2) + S.triangle_size(2)];        
                  
 %aperture radius in pixels in which dots are displayed
 S.ap_radius = tconst.pixperdeg * S.vp.ap_rad;
@@ -149,9 +171,10 @@ S.rewbarlocation = [S.centre(1) + (S.vp.rewbarlocation(1).*tconst.pixperdeg), S.
 S.rewbarsize = S.vp.rewbarsize .* tconst.pixperdeg; 
 
 % location of the fixdot 
-%% NB. This transform_y_pos may never end up being used, should delete it
-transform_y_pos = S.vp.fixdotlocation(2) .* tconst.pixperdeg;
 S.fixdotlocation = S.centre;
+
+%%% Neb: Squares also seem not to be used...
+
 % square for feedback for replies during incoherent motion 
 S.square_size = S.vp.square_size .* tconst.pixperdeg; 
 
@@ -191,6 +214,7 @@ S.sd_duration = round(S.vp.sd_duration / tconst.flipint);
 % display single trials or continuous rdk 
 S.discrete_trials = discrete_trials; 
 
+%%% CODE FOR DISCRETE TRIALS (SHADLEN STYLE) %%%
 if discrete_trials % if during training discrete trials are shown 
     % remember flags in S strucuture to use in trial display later on 
     S.integration_window = integration_window; 
@@ -210,6 +234,8 @@ if discrete_trials % if during training discrete trials are shown
              num_repeats_coh = (S.vp.totaltrials/numel(cohlist))/2;
 
              S.coherence_list = []; % vector in which sequence of coherences is saved 
+             
+             %%% SETTING UP ORDER OF COHERENCES %%% 
 
              for coherence_counter = numel(cohlist):-1:1 % loop through cohlist vector but start with highest coherence 
                  % duplicate coherence level with both signs, e.g. 0.5 -0.5 
@@ -273,8 +299,8 @@ if discrete_trials % if during training discrete trials are shown
     % Randomly assigned number between 0 and 1, all dots with number below coh
     % level will be signal dots
     S.coh_prob = zeros(1,S.Nd);
-        %%%%% continous motion display %%%%%%%%%% 
-else  
+%%% CONTINUOUS TRIALS %%%
+else  % if continuous trials
     % time bar indicating points won on current trial at end of bar will be
     % shown 
 
@@ -309,6 +335,8 @@ else
     % trial/ coherent motion length in short and long condition
     S.integration_short = round(S.vp.shortINT / tconst.flipint);
     S.integration_long = round(S.vp.longINT / tconst.flipint);
+    
+    %%% DEFINING TIMES OF COHERENT AND INCOHERENT MOTION PERIODS %%%
 
     % define incoherent and coherent motion periods for each block, number of
     % blocks and sequence of blocks is defined by S.vp.condition_vec 
@@ -348,37 +376,115 @@ else
 
         switch condition
             case 1 %%'ITIS_INTES' %%%% short variable intertrial intervals, short integration period = coherent motion period 
-                [S.ITIS_vec_intes{j}, S.blocks_shuffled{j},S.blocks_coherence_cells{j}] = calculate_epoch_lengths(S.total_stim_epoch,S.totalframes_per_block,S.iti_short(1),S.iti_short(3),S.integration_short,S.onsets_occur,S.iti_short(2),S.vp.cohlist);
+                [ S.ITIS_vec_intes{j}, S.blocks_shuffled{j}, ...
+                    S.blocks_coherence_cells{j} ] = ...
+                    calculate_epoch_lengths( S.total_stim_epoch, ...
+                    S.totalframes_per_block, S.iti_short(1), ...
+                    S.iti_short(3), S.integration_short, ...
+                    S.onsets_occur, S.iti_short(2), S.vp.cohlist );
                 S.block_coherent_cells{j} =  S.integration_short;
                 
                 S.block_ID_cells{j} = '1';
                 S.ITIS_vec{j} = S.ITIS_vec_intes{j};
-
-
-
+                % calculate vertical motion periods (VMPs) and their respective
+                % VITIs (VMP intertrial intervals). We use the same coherence list
+                % as for HMPs but note that if at any frame the sum of these
+                % coherences (vertical and horizontal) is > 1, the vertical gets
+                % truncated so the sum is = 1
+                if vert_motion == 1 % if we want vertical motion
+                    [S.iti_vec_v{j}, S.coh_incoh_vec_v{j}, ...
+                        S.cohs_v{j}] = ...
+                        calculate_epoch_lengths( S.total_stim_epoch, ...
+                        S.totalframes_per_block, S.iti_short(1), ...
+                        S.iti_short(3), S.integration_short, ...
+                        S.onsets_occur, S.iti_short(2), S.vp.cohlist);
+                else % otherwise
+                    [S.iti_vec_v{j}, S.coh_incoh_vec_v{j}, ...
+                        S.cohs_v{j}] = ...
+                        calculate_epoch_lengths( S.total_stim_epoch, ...
+                        S.totalframes_per_block, S.iti_short(1), ...
+                        S.iti_short(3), 0, ...
+                        S.onsets_occur, S.iti_short(2), [0]);
+                end
             case 2  %%%'ITIS_INTEL' %%%%% short variable intertrial intervals,long integration period = coherent motion period 
-        % calculate epochs of incoherent motion
-                [S.ITIS_vec_intel{j},S.blocks_shuffled{j},S.blocks_coherence_cells{j}] = calculate_epoch_lengths(S.total_stim_epoch,S.totalframes_per_block,S.iti_short(1),S.iti_short(3),S.integration_long,S.onsets_occur,S.iti_short(2),S.vp.cohlist);
+                [ S.ITIS_vec_intel{j}, S.blocks_shuffled{j}, ...
+                    S.blocks_coherence_cells{j} ] = ...
+                    calculate_epoch_lengths( S.total_stim_epoch, ...
+                    S.totalframes_per_block, S.iti_short(1), ...
+                    S.iti_short(3), S.integration_long, S.onsets_occur, ...
+                    S.iti_short(2), S.vp.cohlist );
                 S.block_coherent_cells{j} = S.integration_long;
 
                 S.block_ID_cells{j} = '2';
                 S.ITIS_vec{j} = S.ITIS_vec_intel{j}; 
-
+                
+                % calculate VMPs for this block (with the same parameters
+                % i.e. frequency and length as for HMPs)
+                if vert_motion == 1
+                    [S.iti_vec_v{j}, S.coh_incoh_vec_v{j}, S.cohs_v{j}] = ...
+                        calculate_epoch_lengths( S.total_stim_epoch, ...
+                        S.totalframes_per_block, S.iti_short(1), ...
+                        S.iti_short(3), S.integration_long, S.onsets_occur, ...
+                        S.iti_short(2),S.vp.cohlist );
+                else
+                    [S.iti_vec_v{j}, S.coh_incoh_vec_v{j}, S.cohs_v{j}] = ...
+                        calculate_epoch_lengths( S.total_stim_epoch, ...
+                        S.totalframes_per_block, S.iti_short(1), ...
+                        S.iti_short(3), 0, S.onsets_occur, ...
+                        S.iti_short(2), [0] );
+                end
             case 3 %%%'ITIL_INTES' %%%% long variable intertrial intervals, short integration period = coherent motion period 
-                [S.ITIL_vec_intes{j},S.blocks_shuffled{j},S.blocks_coherence_cells{j} ] = calculate_epoch_lengths(S.total_stim_epoch,S.totalframes_per_block,S.iti_long(1),S.iti_long(3),S.integration_short,S.onsets_occur,S.iti_long(2),S.vp.cohlist);
+                [ S.ITIL_vec_intes{j}, S.blocks_shuffled{j}, ...
+                    S.blocks_coherence_cells{j} ] = ...
+                    calculate_epoch_lengths( S.total_stim_epoch, ...
+                    S.totalframes_per_block, S.iti_long(1), ...
+                    S.iti_long(3), S.integration_short, S.onsets_occur, ...
+                    S.iti_long(2), S.vp.cohlist );
                 S.block_coherent_cells{j} = S.integration_short;   
 
                 S.block_ID_cells{j}= '3';
                 S.ITIS_vec{j} = S.ITIL_vec_intes{j};
-
+                
+                % calculate VMPs for this block
+                if vert_motion == 1
+                    [S.iti_vec_v{j}, S.coh_incoh_vec_v{j}, S.cohs_v{j}] = ...
+                        calculate_epoch_lengths( S.total_stim_epoch, ...
+                        S.totalframes_per_block, S.iti_long(1), ...
+                        S.iti_long(3), S.integration_short, S.onsets_occur, ...
+                        S.iti_long(2), S.vp.cohlist );
+                else
+                    [S.iti_vec_v{j}, S.coh_incoh_vec_v{j}, S.cohs_v{j}] = ...
+                        calculate_epoch_lengths( S.total_stim_epoch, ...
+                        S.totalframes_per_block, S.iti_long(1), ...
+                        S.iti_long(3), 0, S.onsets_occur, ...
+                        S.iti_long(2), [0] );
+                end
             case 4 %%%'ITIL_INTEL' long variable intertrial intervals,long integration period = coherent motion period 
-                [S.ITIL_vec_intel{j},S.blocks_shuffled{j}, S.blocks_coherence_cells{j}] = calculate_epoch_lengths(S.total_stim_epoch,S.totalframes_per_block,S.iti_long(1),S.iti_long(3),S.integration_long,S.onsets_occur,S.iti_long(2),S.vp.cohlist);
+                [ S.ITIL_vec_intel{j}, S.blocks_shuffled{j}, ...
+                    S.blocks_coherence_cells{j} ] = ...
+                    calculate_epoch_lengths( S.total_stim_epoch, ...
+                    S.totalframes_per_block, S.iti_long(1), ...
+                    S.iti_long(3), S.integration_long, S.onsets_occur, ...
+                    S.iti_long(2), S.vp.cohlist );
                 S.block_coherent_cells{j} =  S.integration_long;
 
                 S.block_ID_cells{j} = '4'; 
                 S.ITIS_vec{j} = S.ITIL_vec_intel{j};
-        end % switch condition
-
+                % calculate VMPs for this block
+                if vert_motion == 1
+                    [S.iti_vec_v{j}, S.coh_incoh_vec_v{j}, S.cohs_v{j}] = ...
+                        calculate_epoch_lengths( S.total_stim_epoch, ...
+                        S.totalframes_per_block, S.iti_long(1), ...
+                        S.iti_long(3), S.integration_long, S.onsets_occur, ...
+                        S.iti_long(2), S.vp.cohlist );
+                else
+                    [S.iti_vec_v{j}, S.coh_incoh_vec_v{j}, S.cohs_v{j}] = ...
+                        calculate_epoch_lengths( S.total_stim_epoch, ...
+                        S.totalframes_per_block, S.iti_long(1), ...
+                        S.iti_long(3), 0, S.onsets_occur, ...
+                        S.iti_long(2), [0] );
+                end
+        end
     end % create blocks for each condition
 
     %%%--- Dot Buffers for continuous motion version ---%%%
@@ -426,18 +532,12 @@ else
     S.coh_prob = zeros(1,S.Nd,S.totalframes_per_block);
 end % if discrete trials 
 
-
-
-
- 
 sca % close ptb screen 
 
 end % Init task param function
 
 
 %% additional functions
-
-
 
 function ppd = metpixperdeg(mm, px, sub)
 %

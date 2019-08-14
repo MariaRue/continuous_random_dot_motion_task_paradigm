@@ -1,33 +1,34 @@
 function [respMat,S] = discrete_rdk_trials_training(S,tconst,rewardbar,training,outdir,outfile)
-% This function displays discrete rdk trials, displays feedback to
-% participant and records participant behaviour. It also saves a
-% reward_info file that holds information about how many pounds and how far
-% reward bar was filled in the previous session.
 
-% input: S = stimulus descriptor
-%        tconst = PTB parameters
+% PURPOSE: This function displays discrete rdk (random dot kinetogram) 
+% trials, records subject responses, and displays feedback to them. It also
+% saves a reward_info file that holds information about how many pounds 
+% and how far the reward bar was filled in the previous session (so that
+% subjects can continue from where they left off in future sessions).
+
+% Input: S         = stimulus descriptor (structure)
+%        tconst    = PTB parameters
 %        rewardbar = flag, 1 reward bar shown at end of trial, 0 no reward
-%        bar
-%        training = flag, 1 text describing what feedback means appears
-%        above stimulus
-%        outdir = folder in which reward_info and response behaviour is
-%        saved
-%        outfile = file name for response bevaviour
+%                    bar
+%        training  = flag, 1 text describing what feedback means appears
+%                    above stimulus
+%        outdir    = folder in which reward_info and response behaviour is
+%                    saved
+%        outfile   = file name for response bevaviour
 
-% output: S = stimulus descriptor
+% Output: S       = stimulus descriptor (structure, now modified)
 %         respMat = matrix with response behaviour
-
-% and reward_info is saved
+%         (also, reward_info is saved)
 
 % open window
 
 %%%--- SETUP: screens ---%%%
 if S.debug == 2 || S.debug == 3
-    Screen('Preference', 'SkipSyncTests',1);% 0 should be preferred but synch
+    Screen('Preference', 'SkipSyncTests',1); % 0 should be preferred but synch
     % problems on mac prohibit that. Exact synchronization not necessary because
     % integration across frames not measured as in single neuron electrophys
 else
-    Screen('Preference', 'SkipSyncTests',0);% 0 should be preferred but synch
+    Screen('Preference', 'SkipSyncTests',0); % 0 should be preferred but synch
     % problems on mac prohibit that. Exact synchronization for EEG experiment
   
 end
@@ -35,44 +36,43 @@ PsychDefaultSetup(2);
 screens = Screen('Screens');
 if S.debug == 0 % hide cursor and suppress keyboard input in command window
     HideCursor;
-   
 end
 % get correct screen number for screen on which we want to show task
 tconst.winptr = max(screens);
 
 %%%--- open window to display task ---%%%
 
-% dev_mode=1 puts window in one corner of screen for easier debugging
+% dev_mode = 1 puts window in one corner of screen for easier debugging
 
 if S.debug == 1|| S.debug == 3
-    [tconst.win,tconst.rect]= PsychImaging('OpenWindow', tconst.winptr,S.grey,[0 0 1048 786]);
+    [tconst.win,tconst.rect] = PsychImaging('OpenWindow', tconst.winptr,S.grey,[0 0 1048 786]);
 else % use full screen window
-    [tconst.win,tconst.rect]= PsychImaging('OpenWindow', tconst.winptr, S.grey);
-    
+    [tconst.win,tconst.rect] = PsychImaging('OpenWindow', tconst.winptr, S.grey);
 end
 
 
-disp('screen is set up');
+disp('Screen is set up.');
 
 %%%---SETUP: key response ---%%%
 % Define the keyboard keys that are listened for. We will be
-% using the left and right arrow keys as response keys
+% using A and L as response keys.
 KbName('UnifyKeyNames');
 % feedback on every trial
 leftkey = KbName('A');
 rightkey = KbName('L');
 
 response_device = 'keyboard';
-disp(['response device is ' response_device '.']);
+disp(['Response device is ' response_device '.']);
 [keyboardIndices, ~, ~] = GetKeyboardIndices;
 
 % different on mac and windows, mac gives two numbers, windows only one
 % indes, also for some reason on my personal laptop I have to use the 2nd
 % entry, for other mac users it might be the first one
 if S.debug == 2 || S.debug == 3
-    device_number = keyboardIndices(2); % mac keyboard
-else
     device_number = keyboardIndices; % mac keyboard
+    % NB. Change the above to keyboardIndices(2) if you're on a Mac laptop
+else
+    device_number = keyboardIndices;
 end
 
 % create queue to wait for button press from keyboard
@@ -81,7 +81,6 @@ KbQueueCreate(device_number(1));
 
 %%%--- SETUP: structure for behavioural responses ---%%%
 respMat = NaN(S.vp.totaltrials,7);
-
 
 %%%--- task instructions
 
@@ -92,23 +91,21 @@ DrawFormattedText(tconst.win, text, 'center', 'center', 0);
 flipt=Screen('Flip',tconst.win);
 KbStrokeWait(device_number) % next block starts after participant presses button
 
-text = 'You will see randomly moving dots. \n\n After a short time some of these dots will move either to the left or to the right.  \n\n Press the A key if dots move to the left and the L key if dots move the right';
+text = 'You will see randomly moving dots. \n\n After a short time, some of these dots will move either to the left or to the right.  \n\n Press the A key if dots move to the left, and the L key if dots move the right.';
 DrawFormattedText(tconst.win, text, 'center', 'center', 0);
 flipt=Screen('Flip',tconst.win);
 KbStrokeWait(device_number) % next block starts after participant presses button
 
-text = 'Please always try to fixate on the dot in the centre of the moving dots';
+text = 'Please always try to fixate on the dot in the centre of the moving dots.';
 DrawFormattedText(tconst.win, text, 'center', 'center', 0);
 flipt=Screen('Flip',tconst.win);
 KbStrokeWait(device_number) % next block starts after participant presses button
     
 if S.discrete_trials == 2
-    
-text = 'In this version of the task you will see that the dots change their direction between random, left and right really fast. \n\n Please try to guess in which direction the dots were most of the time moving by pressing A or L again \n\n In addition, the size of the circle will indicate how long you have to make that decision \n\n A large circle at the start means you have a longer time to integrate in comparison to a small circle';
-DrawFormattedText(tconst.win, text, 'center', 'center', 0);
-flipt=Screen('Flip',tconst.win);
-KbStrokeWait(device_number) % next block starts after participant presses button
-    
+    text = 'In this version of the task, you will see that the dots change their direction between random, left and right really fast. \n\n Please try to guess in which direction the dots were most of the time moving by pressing A or L again. \n\n In addition, the size of the circle will indicate how long you have to make that decision. \n\n A large circle at the start means you have a longer time to integrate in comparison to a small circle.';
+    DrawFormattedText(tconst.win, text, 'center', 'center', 0);
+    flipt=Screen('Flip',tconst.win);
+    KbStrokeWait(device_number) % next block starts after participant presses button
 end 
  KbEventFlush(device_number);
     KbQueueStop(device_number);
@@ -116,25 +113,19 @@ end
 % this has information about how many pounds have been one in previous
 % trial and how far reward bar was filled
 
-% check whether a reward_info file exists,
+% check whether a reward_info file exists
 reward_file = sprintf('sub%03.0f_reward_info.mat',S.vp.subid);
 if exist(fullfile(outdir,reward_file),'file')
-    
-    % if it does load it
-    
+    % if it does, load it
     matrix = load(reward_file);
     reward_matrix = matrix.reward_matrix;
-    
     S.coins_counter = reward_matrix(1,2); % money already won
     S.totalPoints = reward_matrix(1,1); % how far reward bar has been filled up in last session
-    
-else % if first session and reward matrix doesnt exist make one
-    
+else % if first session and reward matrix doesn't exist, make one
     reward_matrix = zeros(1,2);
     S.coins_counter = 0;
     S.totalPoints = 0;
-    
-end % if reward_matrix exists
+end
 
 topPriorityLevel = MaxPriority(tconst.win);
 Priority(topPriorityLevel);
@@ -142,7 +133,10 @@ Priority(topPriorityLevel);
 timer = tic; % this tracks time,
 % so that PMF and RTs can be calculated every ten minutes
 
-%%%--- loop through trials ---%%%
+%%%--- Loop through trials ---%%%
+% THIS IS THE ACTUAL TASK. Now, the computer will run through all the
+% trials (set by trial_number parameter in the .csv), record responses,
+% and provide feedback (including reward/punishment) to participants.
 for trial = 1:S.vp.totaltrials
     
     if S.integration_window == 1 && S.discrete_trials == 2
@@ -184,138 +178,85 @@ for trial = 1:S.vp.totaltrials
     % display dots
     flipt=Screen('Flip', tconst.win, flipt+((1/tconst.framerate)*.7));
     
-    
     WaitSecs(0.5); % fix dot is shown for 0.5secs 
-    
     
     Fbcolour = [0 0 0]; % set fixdot colour to black as default in case no button has been pressed before flexfeedback time starts 
     %%%--- display stimulus for set trial time ---%%%
-    
     
     %%% this needs to be the trial time allowed, either short or long
     %%% integration this while loop needs to stop when participant responded
     %%% and if stimulus time is over
     
     while f <= S.discrete_stim_duration_total + S.flex_feedback
-        
-        
-        
         if f > S.discrete_stim_duration_total % if stim duration is exceeeded, show a grey screen with fixdot 
-            
-          
-                
-                   Screen('DrawDots' , tconst.win , [0 0], size_org, Fbcolour,...
+            Screen('DrawDots' , tconst.win , [0 0], size_org, Fbcolour,...
             S.fixdotlocation, S.vp.dot_type);
-          
-              
-
         else % otherwise display dots
-            
             % get trial start time on first coherent dot frame of trial
-                      if f == 1
-                
+            if f == 1
                 tstart_incoh = GetSecs;
-              
-                
             elseif f == S.pre_incoh_mo + 1
-                
-                
                 tstart = GetSecs;
-                
             elseif f > S.pre_incoh_mo && f <= S.discrete_stim_duration_total && S.discrete_trials == 2
-                
                 size = size - px; 
-          
-                
             end
-            
-            
             % which feedback shape is shown based on response of
             % participant
             if respMat(trial,7) == 1 || respMat(trial,7) == 0 % if correct or incorrect response, fix dot turns either green or blue respectively.
-                
-
-                
                 if training % display what feedback means
-                    
                     if Fbcolour == S.green
                         text = 'correct';
                     else
                         text = 'incorrect';
                     end
-    DrawFormattedText(tconst.win, text, S.fixdotlocation(1)-50,...
-                S.fixdotlocation(2)-290, 0);
+                    DrawFormattedText(tconst.win, text, S.fixdotlocation(1)-50,...
+                    S.fixdotlocation(2)-290, 0);
                 end % training
-                
                 colour = Fbcolour; 
-                
             elseif respMat(trial,7) == 2
-   
                 colour = Fbcolour; 
                 if training % display what feedback means
-                    
-                    
                     text = 'too early';
-    DrawFormattedText(tconst.win, text, S.fixdotlocation(1)-50,...
-                S.fixdotlocation(2)-290, 0);
+                    DrawFormattedText(tconst.win, text, S.fixdotlocation(1)-50,...
+                    S.fixdotlocation(2)-290, 0);
                 end % training
-                
-                
             else % black fix dot if no response occured
-                
                 % Submit drawing instructions to PTB
-
                 colour = S.black; 
-                
-            end% which feedback shape
+            end % which feedback shape
             
             if size > 3
-             Screen('Drawdots',tconst.win,[0 0],size,colour,S.fixdotlocation,S.vp.dot_type);
-             
-      
+                Screen('Drawdots',tconst.win,[0 0],size,colour,S.fixdotlocation,S.vp.dot_type);
             end 
             % draw moving dots
             Screen('DrawDots' , tconst.win , S.xy{trial}(:,:,f), S.dotdiameter, S.black,...
-                S.centre, S.vp.dot_type);
+            S.centre, S.vp.dot_type);
         end % if oiutside coherent motion
-        
         
         % Set appropriate alpha blending for correct anti-aliasing of dots
         Screen (  'BlendFunction'  ,  tconst.win  ,  ...
             'GL_SRC_ALPHA'  ,  'GL_ONE_MINUS_SRC_ALPHA'  ) ;
-        
-        
-        
+
         % display dots
         flipt=Screen('Flip', tconst.win, flipt+((1/tconst.framerate)*.7));
         
-        
-        
         % increase frame idx
         f = f+1;
-        
-        
-     if keydown == 0
-        % check wheter arrow key has been pressed
-        [keyIsDown,firstpress] = KbQueueCheck(device_number(1));
-        
-     end
+
+        if keydown == 0
+            % check wheter arrow key has been pressed
+            [keyIsDown,firstpress] = KbQueueCheck(device_number(1));
+        end
         
         if keyIsDown % flag, that indicates that key has been pressed and further button presses are not recorded anymore
-            
             keydown = 1;
-            
-%             KbQueueStop;
-            
+        % KbQueueStop;   
         else
             keydown = 0;
         end % key is Down
-        
-        
-        
+
         if keydown % if button has been pressed first time in trial, record response
             respMat(trial,6) = f;
-            
             if f <= S.pre_incoh_mo
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 respMat(trial,4) = S.coherence_list(trial); % coherence of trial
@@ -335,28 +276,20 @@ for trial = 1:S.vp.totaltrials
                 
                 Fbcolour = S.yellow;
                 keydown = 1;
-                
             elseif respMat(trial,7) ~= 2 % in coherent motion period of trial
-                
                 respMat(trial,4) = S.coherence_list(trial); % coherence of trial
-                
                 if firstpress(leftkey) % if left arrow key has been pressed
-                    
                     respMat(trial,3) = 0; % choice as left
                     respMat(trial,2) = firstpress(leftkey)-tstart; % rt
-                    
                     if S.coherence_list(trial) < 0 % coherence < 0 = movement to left
-                        
                         respMat(trial,5) = 1; % choice was correct
                         respMat(trial,7) = 1; % response made
                         respMat(trial,1) = S.vp.point(1); % points won
                         
                         Fbcolour = S.green; % feedback colour green fix dot
                         
-                        
                     elseif S.coherence_list(trial) == 0 % randomly chose correct side
                         if rand(1,1) <= 0.5 % choose left side as correct side
-                            
                             respMat(trial,5) = 1;
                             respMat(trial,7) = 1; % response made
                             respMat(trial,1) = S.vp.point(1);
@@ -364,7 +297,6 @@ for trial = 1:S.vp.totaltrials
                             Fbcolour = S.green;
                             
                         else % randomly chosen right side as correct side
-                            
                             respMat(trial,5) = 0;
                             respMat(trial,7) = 0; % response made
                             respMat(trial,1) = S.vp.point(2);
@@ -372,45 +304,31 @@ for trial = 1:S.vp.totaltrials
                             Fbcolour = S.red;
                             
                         end % if rand < 0.5
-                        
                     elseif S.coherence_list(trial) > 0 % coherence to the right
-                        
                         respMat(trial,5) = 0;
                         respMat(trial,7) = 0; % response made
                         respMat(trial,1) = S.vp.point(2);
                         
                         Fbcolour = S.red;
-                        
-                        
                         
                     end % if movement to the left
-                    
-                    
-                    
-                    
                 elseif firstpress(rightkey) % right arrow key has been pressed - same as above
-                    
                     respMat(trial,3) = 1;
                     respMat(trial,2) = firstpress(rightkey)-tstart;
-                    
                     if S.coherence_list(trial) < 0
-                        
                         respMat(trial,5) = 0;
                         respMat(trial,7) = 0; % response made
                         respMat(trial,1) = S.vp.point(2);
                         
                         Fbcolour = S.red;
                         
-                        
                     elseif S.coherence_list(trial) == 0 % randomly chose correct side
-                        
                             respMat(trial,5) = 0;
                             respMat(trial,7) = 0; % response made
                             respMat(trial,1) = S.vp.point(2);
                             
                             Fbcolour = S.red;
                     
-                        
                     elseif S.coherence_list(trial) > 0
                         
                         respMat(trial,5) = 1;
@@ -418,79 +336,59 @@ for trial = 1:S.vp.totaltrials
                         respMat(trial,1) = S.vp.point(1);
                         
                         Fbcolour = S.green;
-                        
-                        
-                        
-                        
                     end % if coherence
-                    
-                    
-                    
-                    
-                    
-                    
                 end % if left key
-                
             end % if incoherent motion period or not
-            
-            
         end % if key is down
         
-        
-        % in case participant didnt make a response
+        % in case participant didn't make a response
         if keydown == 0 && f == (S.discrete_stim_duration_total + S.flex_feedback) && isnan(respMat(trial,7)) % last trial frame
-            
             if S.coherence_list(trial) == 0 
-                
-                            respMat(trial,5) = 1;
-                            respMat(trial,7) = 4; % response made
-                            respMat(trial,1) = S.vp.point(1);
-                            
-                            Fbcolour = S.green;
-                            
-                
-                
+                respMat(trial,5) = 1;
+                respMat(trial,7) = 4; % response made
+                respMat(trial,1) = S.vp.point(1);
+
+                Fbcolour = S.green;
             else
-            respMat(trial,6) = f;
-            
-            respMat(trial,1) = S.vp.point(4);
-            respMat(trial,2) = S.discrete_stim_duration/tconst.framerate;
-            respMat(trial,4) = S.coherence_list(trial);
-            respMat(trial,5) = 0;
-            respMat(trial,7) = 3; % response made
-            
-            Fbcolour = S.blue;
-            
+                respMat(trial,6) = f;
+
+                respMat(trial,1) = S.vp.point(4);
+                respMat(trial,2) = S.discrete_stim_duration/tconst.framerate;
+                respMat(trial,4) = S.coherence_list(trial);
+                respMat(trial,5) = 0;
+                respMat(trial,7) = 3; % response made
+
+                Fbcolour = S.blue;
             end
         end
-        
-        
-        
     end % while total num of frame is not reached
-    
-    
-    
     
     %%% show feedback
     
-    if rewardbar % show reweard bar if flag is 1
+    if rewardbar % show reward bar if flag is 1
+        if isnan(respMat(trial,1))
+            respMat(trial,1) = 0; % fixes bug - if someone presses an unassigned button,
+            % this remains NaN, so when it gets added to S.totalPoints it
+            % turns THAT into NaN, messing up the rewardbar...
+        end
         S.totalPoints = S.totalPoints + respMat(trial,1); % calculate totalPoints,
-        % previous one points plus points won on current trial, this determines how far rewardbar is filled
+        % previous points plus points won on current trial, this determines how far rewardbar is filled
         
         % calculate rewardbar and how many pounds won
         [S.coins_counter,S.x_rect_old,text_reward,centeredRect,centeredFrame,centeredrewardRect,S.totalPoints,reward_m]...
-            = moneybar(S.x_rect_old,S.coins_counter,S.rewbarsize,S.centre(1),...
-            S.centre(2),S.ap_radius,S.totalPoints,S.totalPointsbar,respMat(trial,1),S.rewbarlocation);
+            = moneybar(S.x_rect_old, S.coins_counter, S.rewbarsize,...
+            S.centre(1), S.centre(2), S.ap_radius, S.totalPoints, ...
+            S.totalPointsbar, respMat(trial,1), S.rewbarlocation, ...
+            S.vp.reward);
         
         %%%% first half of feedback time show feedback and reward bar, with
         %%%% amount of points won in white at end of reward bar
         
+        % draw rewardbar and colour depending on points
         if S.totalPoints >= 0 % draw green reward bar, if participant has positive number of points
             Screen('FillRect',tconst.win,S.green, centeredRect); % display bar
-            
-        else % and red if noumber of total points won is negative
+        else % and red if number of total points won is negative
             Screen('FillRect',tconst.win,S.red, centeredRect); % display bar
-            
         end
         
         if respMat(trial,1) > 0 
@@ -498,83 +396,64 @@ for trial = 1:S.vp.totaltrials
         else 
              Screen('FillRect',tconst.win,S.red, centeredrewardRect);
         end
-        
-        
-        %Screen('FillRect',tconst.win,S.white, centeredrewardRect); % display bar
-        
+        %Screen('FillRect',tconst.win,S.white, centeredrewardRect); % display bar 
     end
+    
     % draw black frame around reward bar
     Screen('FrameRect',tconst.win,S.black,centeredFrame,4); % display frame of bar
     DrawFormattedText(tconst.win, text_reward, S.centre(1)+round(S.rewbarsize(1)/2)+30,...
         S.rewbarlocation(2), 0);
-    
-  
-    %display pounds won
+
+    % display pounds won
     DrawFormattedText(tconst.win, text_reward, S.centre(1)+round(S.rewbarsize(1)/2)+30,...
        S.rewbarlocation(2), 0);
-    
-    
-    
-    
-        
-    
-    % which feedback shape shown with reward bar at end of trial
+   
+    %%%--- FEEDBACK (after each trial) ---%%%
+    % which feedback colour shown with reward bar at end of trial
     if respMat(trial,7) == 1 || respMat(trial,7) == 0 % fix dot changes colour as above
-        
-
         if training
-            
             if Fbcolour == S.green
-                text = 'correct';
+                text = 'Correct!';
             else
-                text = 'incorrect';
+                text = 'Incorrect!';
             end
-    DrawFormattedText(tconst.win, text, S.fixdotlocation(1)-50,...
+            DrawFormattedText(tconst.win, text, S.fixdotlocation(1)-50,...
                 S.fixdotlocation(2)-290, 0);
         end
-        
-    elseif respMat(trial,7) == 2 % response too early during incoh motion
-
+    elseif respMat(trial,7) == 2 % if response is too early (during 
+                                 % incoherent motion)
         if training % display what feedback means
-            
-            
-            text = 'too early';
-            
-            
-    DrawFormattedText(tconst.win, text, S.fixdotlocation(1)-50,...
+            text = 'Too early!';
+            DrawFormattedText(tconst.win, text, S.fixdotlocation(1)-50,...
                 S.fixdotlocation(2)-290, 0);
         end % training
-        
-    elseif respMat(trial,7) == 3 % if no response recorded show a red triangle
-        
-Fbcolour = S.blue; 
-        
+    elseif respMat(trial,7) == 3 % if no response recorded (i.e. 
+                                 % participant misses, or doesn't realise 
+                                 % they should press button), turn blue
+        Fbcolour = S.blue; 
         if training
-            text = 'missed';
-    DrawFormattedText(tconst.win, text, S.fixdotlocation(1)-50,...
+            text = 'Missed!';
+            DrawFormattedText(tconst.win, text, S.fixdotlocation(1)-50,...
                 S.fixdotlocation(2)-290, 0);
         end
     end % which feedback shape
     
-    % display dots
+    % Display fixdot (including which colour set by above IF conditions)
             Screen('DrawDots' , tconst.win , [0 0], size_org, Fbcolour,...
             S.fixdotlocation, S.vp.dot_type);
         
     flipt=Screen('Flip', tconst.win, flipt+(0.5 * S.vp.feedback_duration));
     
-    %%% show grey screen
+    %%% Show grey screen
     
     DrawFormattedText(tconst.win, '', 'center', 'center', 0);
     
-    % display screen
+    % Display screen
     flipt=Screen('Flip', tconst.win, flipt+(0.5.*S.vp.feedback_duration));
     
     WaitSecs(1);
-    
-    
+
     if performance_flag % if 10min since last tic call have passed, break
-        
-        
         DrawFormattedText(tconst.win, 'Please take a break!', 'center', 'center', 0);
         flipt=Screen('Flip', tconst.win);
         WaitSecs(1);
@@ -587,13 +466,13 @@ Fbcolour = S.blue;
         % filled
         reward_matrix(1,:) = reward_m;
         
-%         filename = sprintf('sub%03.0f_reward_info.mat',S.vp.subid); %updated filename ouf output
+        % filename = sprintf('sub%03.0f_reward_info.mat',S.vp.subid); %updated filename ouf output
         savePath = fullfile(outdir, reward_file);
         save(savePath,'reward_matrix');
         
         Screen('CloseAll') % close PTB screen
         
-        % display psychometric function and rt ditribution
+        % display psychometric function and rt distribution
         rt_choice_cohlevel_correct = respMat; % copy of behaviour
         
         % get performance info needed
@@ -613,58 +492,42 @@ Fbcolour = S.blue;
         while isempty(answer) %to validate input
             prompt = 'Do you want to continue with the current session? y/n: ';
             answer = input(prompt,'s');
-            
             switch answer
-                
                 case 'y' % continue with session
                     if S.debug == 1
                         [tconst.win,tconst.rect]= PsychImaging('OpenWindow',...
                             tconst.winptr,S.grey,[0 0 1048 786]);
-                        
-                        
-                        
                     else % use full screen window
                         [tconst.win,tconst.rect]= PsychImaging('OpenWindow',...
                             tconst.winptr, S.grey);
-                        
                     end
                     timer = tic;
                     % make PTB priority again
                     topPriorityLevel = MaxPriority(tconst.win);
                     Priority(topPriorityLevel);
-                    
                 case 'n' % close session
-                    
                     return;
-                    
                 otherwise
-                    
                     answer = '';
             end % switch answer
         end % while loop
     end % if performance flag
     
-    
-    
     KbQueueFlush(device_number(1));
     KbQueueStop;
-    
-    
-    
-    
 end %%% loop through trials
 
 %%%%% show feedback after last trial
 
-%%% show performance and total pounds/points earned
+%%% Calculate performance and total pounds/points earned
 performance = (sum(respMat(~isnan(respMat(:,5)),5))/S.vp.totaltrials) .* 100;
-feedback_block = ['Well done! \n', num2str(performance),' % correct \n \n You have earned ',...
-    num2str(S.coins_counter),' £'];
+feedback_block = ['Well done! \n', num2str(performance),' % correct \n \n You have earned £',...
+    num2str(S.coins_counter)];
 
+% Draw this text on screen
 DrawFormattedText(tconst.win, feedback_block, 'center', 'center', 0);
 Screen('Flip', tconst.win, flipt);
 WaitSecs(4);
-
 
 % save reward related info
 reward_matrix(1,:) = reward_m;
@@ -676,15 +539,13 @@ save(savePath,'reward_matrix');
 savePath = fullfile(outdir,outfile);
 save(savePath,'respMat','S','tconst');
 
-sca
+sca % clear screen
 
 % display psychometric function and rt ditribution
 rt_choice_cohlevel_correct = [respMat(:,2),respMat(:,3),respMat(:,4),respMat(:,5),respMat(:,7)];
 
 rt_choice_cohlevel_correct = rt_choice_cohlevel_correct(~isnan(rt_choice_cohlevel_correct(:,2)),:);
 PMF_RT_Plots(rt_choice_cohlevel_correct,1,0);
-
-
 
 end % function discrete trials
 

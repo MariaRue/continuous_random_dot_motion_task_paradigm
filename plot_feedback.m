@@ -1,59 +1,59 @@
-function plot_feedback(respMat, mean_coherence, coherence_frame, condition_vec)
+function plot_feedback(type, id, respMat, mean_coherence, coherence_frame, condition_vec, scrWidth, scrHeight)
+% PURPOSE: This function plots feedback after either one block or all 
+% blocks (depending on input parameters) in the form of a coherence and 
+% mean_coherence graph overlaid with rectangles showing horizontal coherent
+% motion periods, and markers for each type of response participant made
+% (correct, incorrect, false positive, missed)
+%
+% Input:
+%    type = flag, 1 if you want to display straight after a block, 2 if you
+%             want to display at the end of all blocks
+% 
+% by Neb Jovanovic
+% with thanks to Dr Jonathan Hadida for showing me how to optimise through
+% indexing!
 
-figure
+figure('Position', [0 0 scrWidth scrHeight]);
 title('No condition_vec saved...');
-for i = 1:4
-    subplot(4,1,i);
+colour = {[224/255 67/255 58/255], [71/255 219/255 64/255], [224/255 199/255 58/255], [66/255 221/255 245/255]};
+
+if type == 1
+    hold on;
     xlabel('Frame');
     ylabel('Coherence');
-    % plot which bits are coherent motion periods
-    % set up some variables first...
-    start_frame = 2;
-    end_frame = 2;
-    last_frame_block_drawn = 1;
-    % this FOR loop merely goes through all the frames, and draws
-    % rectangles where mean_coherence is NOT zero (just makes it easier to
-    % view when coherent motion periods occur--you could just
-    % plot(S.mean_coherence) and save yourself the trouble, but that's more
-    % difficult to view)
-    for f = 2:size(mean_coherence{i}, 1)
-        if mean_coherence{i}(f, 1) ~= 0 && mean_coherence{i}(f-1, 1) == 0
-            start_frame = f; % find the first frame of each coherent motion block
-        end
-        if mean_coherence{i}(f, 1) == 0 && mean_coherence{i}(f-1, 1) ~= 0
-            end_frame = f; % find the last frame of each coherent motion block
-        end
-        % draw a gray rectangle to show coherent motion periods, but
-        % only if not drawn before
-        if end_frame > start_frame && last_frame_block_drawn ~= end_frame
-            rectangle('Position', [start_frame -1.49 end_frame-start_frame 3], 'FaceColor', '#ebebeb', 'LineStyle', 'none');
-        end
+
+    MCi = mean_coherence{id};
+    CFi = coherence_frame{id};
+
+    nframe = size(MCi,1); % number of frames
+
+    % draw the rectangles corresponding to trials
+    absMC = abs(MCi);
+    k_first = find( absMC(2:end) - absMC(1:end-1) > 0 );
+    k_last = find( absMC(2:end) - absMC(1:end-1) < 0 );
+    ntrial = numel(k_first);
+
+    for j = 1:ntrial
+        rectangle('Position', [k_first(j), -1.49, k_last(j)-k_first(j)+1, 3], ...
+            'FaceColor', [235/255 235/255 235/255], 'LineStyle', 'none');
     end
-        %%% plot participant responses onto graph
+
     % find row numbers of responses in current block
-    responses = find(~isnan(respMat{i}(:, 1)));
-    % now assign colours for each response
-    for k = 1:size(responses)
-        switch respMat{i}(responses(k), 7)
-            case 0 % wrong response during coherent motion
-                rect_colour = '#e0433a'; % scarlet red
-            case 1 % correct response during coherent motion
-                rect_colour = '#47db40'; % emerald green
-            case 2 % response during incoherent motion
-                rect_colour = '#e0c73a'; % banana yellow
-            case 3 % missed response
-                rect_colour = '#42ddf5'; % ocean blue
-            otherwise
-                rect_colour = 'Error!';
-        end
-        % plot rectangles for each response, with corresponding colours
-        rectangle('Position', [respMat{i}(responses(k, 1), 6) -1.49 12 3], 'FaceColor', rect_colour, 'LineStyle', 'none');
+    r_valid = find(~isnan(respMat{id}(:, 1)));
+    nresp = numel(r_valid);
+    for j = 1:nresp
+        r6 = respMat{id}(r_valid(j), 6);
+        r7 = respMat{id}(r_valid(j), 7);
+        rectangle('Position', [r6, -1.49, 25, 3], ...
+            'FaceColor', colour{r7+1}, 'LineStyle', 'none');
     end
-    % plot the coherences
-    hold on
-    plot(coherence_frame{i});
+
+    % plot the blue and red lines
+    plot( 1:nframe, MCi, 'r' ); 
+    plot( 1:nframe, CFi, 'b' );
+
     % set up titles
-    switch i
+    switch id
         case 1
             ordinal = 'First';
         case 2
@@ -63,32 +63,107 @@ for i = 1:4
         case 4
             ordinal = 'Fourth';
     end
+
     % another switch to construct title according to condition
     if ~isempty(condition_vec)
-        switch condition_vec(i)
+        switch condition_vec(id)
             case 1
-                title([ordinal ' block (frequent trials, short integration)']);
+                title({[ordinal ' block (frequent trials, ' ...
+                    'short integration)'], ...
+                    '(Press any key to continue with task)'});
             case 2
-                title([ordinal ' block (frequent trials, long integration)']);
+                title({[ordinal ' block (frequent ' ...
+                    'trials, long integration)'], ...
+                    '(Press any key to continue with task)'});
             case 3
-                title([ordinal ' block (rare trials, short integration)']);
+                title({[ordinal ' block (rare trials, ' ...
+                    'short integration)'], ...
+                    '(Press any key to continue with task)'});
             case 4
-                title([ordinal ' block (rare trials, long integration)']);
+                title({[ordinal ' block (rare trials, ' ...
+                    'long integration)'], ...
+                    '(Press any key to continue with task)'});
         end
     end
-    % plot the mean coherence over everything, makes it easier to
-    % understand
-    plot(mean_coherence{i});
-    % add legend
-    % limit axes so graphs look nice
-    axis([0 inf -1.5 1.5]);
-end
 
+    % limit axes so graphs look nice
+    axis([0, nframe, -1.5, 1.5]);
+elseif type == 2
+    for i = 1:4
+        subplot(4,1,i); hold on;
+        xlabel('Frame');
+        ylabel('Coherence');
+
+        MCi = mean_coherence{i};
+        CFi = coherence_frame{i};
+
+        nframe = size(MCi,1); % number of frames
+
+        % draw the rectangles corresponding to trials
+        absMC = abs(MCi);
+        k_first = find( absMC(2:end) - absMC(1:end-1) > 0 );
+        k_last = find( absMC(2:end) - absMC(1:end-1) < 0 );
+        ntrial = numel(k_first);
+
+        for j = 1:ntrial
+            rectangle('Position', [k_first(j), -1.49, k_last(j)-k_first(j)+1, 3], ...
+                'FaceColor', '#ebebeb', 'LineStyle', 'none');
+        end
+
+        % find row numbers of responses in current block
+        r_valid = find(~isnan(respMat{i}(:, 1)));
+        nresp = numel(r_valid);
+        for j = 1:nresp
+            r6 = respMat{i}(r_valid(j), 6);
+            r7 = respMat{i}(r_valid(j), 7);
+            rectangle('Position', [r6, -1.49, 25, 3], ...
+                'FaceColor', colour{r7+1}, 'LineStyle', 'none');
+        end
+
+        % plot the blue and red lines
+        plot( 1:nframe, MCi, 'r' ); 
+        plot( 1:nframe, CFi, 'b' );
+
+        % set up titles
+        switch i
+            case 1
+                ordinal = 'First';
+            case 2
+                ordinal = 'Second';
+            case 3
+                ordinal = 'Third';
+            case 4
+                ordinal = 'Fourth';
+        end
+
+        % another switch to construct title according to condition
+        if ~isempty(condition_vec)
+            switch condition_vec(i)
+                case 1
+                    title([ordinal ' block (frequent trials, short integration)']);
+                case 2
+                    title([ordinal ' block (frequent trials, long integration)']);
+                case 3
+                    title([ordinal ' block (rare trials, short integration)']);
+                case 4
+                    title([ordinal ' block (rare trials, long integration)']);
+            end
+        end
+
+        % limit axes so graphs look nice
+        axis([0, nframe, -1.5, 1.5]);
+    end
+end
+    
+
+% add legend, including five fake plots so we can have a legend for the
+% rectangles
 h = zeros(5, 1);
-h(1) = scatter(NaN,NaN,NaN,[0.9215 0.9215 0.9215], 'filled'); % gray (trials)
-h(2) = scatter(NaN,NaN,NaN,[0.8784 0.2627 0.2275], 'filled');
-h(3) = scatter(NaN,NaN,NaN,[0.2784 0.8588 0.2510], 'filled');
-h(4) = scatter(NaN,NaN,NaN,[0.8784 0.7804 0.2275], 'filled');
-h(5) = scatter(NaN,NaN,NaN,[0.2588 0.8667 0.9608], 'filled');
-legend('Coherence','Mean coherence', 'Trial', 'Incorrect', 'Correct', 'Early', 'Missed');
+h(1) = scatter(0,0,0.1,[0.9215 0.9215 0.9215], 'filled'); % gray (trials)
+h(2) = scatter(0,0,0.1,[0.2784 0.8588 0.2510], 'filled'); % green (correct)
+h(3) = scatter(0,0,0.1,[0.8784 0.2627 0.2275], 'filled'); % red (incorrect)
+h(4) = scatter(0,0,0.1,[0.8784 0.7804 0.2275], 'filled'); % yellow (early)
+h(5) = scatter(0,0,0.1,[0.2588 0.8667 0.9608], 'filled'); % cyan (missed)
+legend('Coherence','Mean coherence', 'Trial', 'Correct', 'Incorrect', 'Early', 'Missed');
+
 end

@@ -1,4 +1,4 @@
-function [stim_vec] = calculate_coherence_vec(epoch, sd_duration, mean_duration, sd_coherence, mean_coherence, ft, noise_amplitude, step_function)
+function [stim_vec] = calculate_coherence_vec(epoch, sd_duration, mean_duration, sd_coherence, mean_coherence, ft, noise_amplitude, step_function, min_duration, max_duration)
 
 % PURPOSE: This function returns a vector, whose length equals the amounts 
 % of frames passed to the function ('epoch' parameter), composed of "steps"
@@ -12,7 +12,7 @@ function [stim_vec] = calculate_coherence_vec(epoch, sd_duration, mean_duration,
 % motion period.
 
 % An example of the output:
-
+%
 % stim_vec = [-0.343 -0.343 -0.343 0.177 0.177 0.177 0.177 -0.981 ...]
 %
 % This would correspond to at least three steps: the first step is three
@@ -21,29 +21,33 @@ function [stim_vec] = calculate_coherence_vec(epoch, sd_duration, mean_duration,
 % coherence of -0.981 and in this example, we can't see how long it is, but
 % the real variable obviously has different steps of discrete and known
 % length.
-
+%
 % This output is then used when rendering dots during a task. Remember, the
 % coherence of dots always shifts (because of steps) from time to time; in
 % coherent motion periods, it has some constant mean (e.g. 0.7 means 70% of
 % dots are moving to the right) and in incoherent motion periods, there are
 % small periods of coherence but their mean coherence is 0.
-
+%
 % Important: the step lengths and coherences can be be drawn from different 
 % distributions depending on the step_function flag (see below).
 
 % Input:
-
+%
 % epoch = length of incoherent motion periods in frames
-
-% sd_duration = standard deviation of normal distribution from which we draw coherence
-% levels for each jump (?)
-
+%
+% sd_duration = standard deviation of normal distribution from which we 
+%                 draw coherence levels for each step
+%
 % mean_duration = mean jump length in number of frames (?)
 %
 % sd_coherence = vector (?) of different standard deviations for each
 %                  incoherent motion period
 %
-% mean_coherence =
+% mean_coherence = the mean coherence of the dots across the epoch, and
+%                    thus output vector (i.e. the coherences are different 
+%                    from step to step--see the example output above--but 
+%                    these values vary around the mean specified by this
+%                    parameter)
 %
 % ft = filter object required for WhiteNoise flag (redundant now, no longer
 % used?)
@@ -66,14 +70,20 @@ function [stim_vec] = calculate_coherence_vec(epoch, sd_duration, mean_duration,
 %                   time with a much narrower standard deviation. Unlike 
 %                   the first option, the trial periods consist of one step 
 %                   only.
+%                 if 'SingleStimDuration': every single frame has the same
+%                 coherence (mean_coherence).
+% min_duration = minimum duration of step in ms (truncates distribution)
+% 
+% max_duration = maximum duration of steps in ms
+
+% Output
+%
+% stim_vec = a vector of frames (as long as the input 'epoch') with a value
+% between -1 or 1 for each frame describing the left/right coherence. (See
+% above for example.)
 
 switch step_function
     case 'ExpStep'
-        % min and max to truncate the distribution - hard-coded for now but
-        % make these input arguments later!
-        % Neb: shall I do this?
-        min_duration = 5;
-        max_duration = 100;
         % t is the number of frames allocated to "jumps". Here, it's the 
         % sum of individual samplings from an exponential distribution
         t = 0;
@@ -111,6 +121,14 @@ switch step_function
             % determine which coherence value we will assign to this step
             % of incoherent motion
             coherence_value =  sd_coherence .* randn(1,1) + mean_coherence;
+            % truncate the coherence values if they're above 100% (doesn't
+            % change anything, just makes the graph of this function nicer
+            % looking)
+            if (coherence_value > 1)
+                coherence_value = 1;
+            elseif coherence_value < -1
+                coherence_value = -1;
+            end
             
             % assign this coherence value to this step (NOT just this
             % frame, but all frames within the step)
@@ -145,25 +163,9 @@ switch step_function
             
             start_idx = start_idx + duration(t);
             
-    end % loop through steps and assign coherences
-    % old code below, unused currently
-%     case 'WhiteNoise'
-%         % generate random coherences with mean 0 for incoherent motion frame scaled by
-%         % standard - deviation for an incoherent motion period
-%         s_incoh = randn(epoch,1).* sd_coherence;
-% 
-%         % low pass filter this 
-%         incoh_filtered = filter(ft,s_incoh);
-% 
-%         % filter leads to a distortion of the sd so scale back to the original
-%         % value, this step also changes amplitude of noise 
-%         stim_vec = (sd_coherence*incoh_filtered/std(incoh_filtered)).* noise_amplitude;
-%     case 'SingleStimDuration'  
-%         stim_vec = zeros(epoch,1) + mean_coherence; 
-%     case 'changingStimDuration'
-%         epoch = abs(round(sd_duration .* randn(1,1)+mean_duration)); 
-%         stim_vec = zeros(epoch,1) + mean_coherence; 
-%           
+        end % loop through steps and assign coherences
+    case 'SingleStimDuration'  
+        stim_vec = zeros(epoch,1) + mean_coherence;         
 end
 
 % trim output to length of ITI only, as sometimes algorithm may produce too

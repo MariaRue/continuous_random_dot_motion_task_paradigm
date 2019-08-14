@@ -17,10 +17,7 @@ function [p] = cum_Gauss_PMF(xrange,param,pl)
  
 % OUTPUT: p = probabilities (y) of function 
  
-
 % Maria Ruesseler, University of Oxford, 2017
-
-
 
 y = (xrange - param.b0)./param.b1; % first half of Gaussian norm. dist. function: y = (x - mu) / sigma.
 %
@@ -30,13 +27,11 @@ y = (xrange - param.b0)./param.b1; % first half of Gaussian norm. dist. function
 
 p = (erf(y/sqrt(2)) +1)/2;  % second half of Gaussian norm. dist. function: p = 1/2(1 + erf(y / sqrt(2) ) ).
 
-
 if pl
-hold on 
-plot(xrange,p,'k-')
-ylabel('probability')
-xlabel('stim difficulty')
+    hold on 
+    plot(xrange,p,'k-')
+    ylabel('probability')
+    xlabel('stim difficulty')
 end
-
 
 end % function cum_Gauss_PMF 

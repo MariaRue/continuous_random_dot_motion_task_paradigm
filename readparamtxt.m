@@ -1,13 +1,13 @@
 function [p] = readparamtxt(param_file, par2num)
 
-% this function reads in parameters from a text file params.txt - This
+% this function reads in parameters from a .csv file (param_txt) - This
 % contains a table with different parameters we might want to change
 
 
 % expID = mac or 7ts
 % expday = year,month,day
 % exparea = LIP,FEF or none for training
-% subid = e.g. test17
+% subid = subject ID e.g. test17
 % subgender = f or m
 % subage = subject age
 % srcwidth = width of display screen in mm
@@ -19,27 +19,19 @@ function [p] = readparamtxt(param_file, par2num)
 
 % param and values need be separated by a comma
 
-[N,T,R] = xlsread(param_file); % read in file
+T = readtable(param_file, 'ReadVariableNames', true, 'Delimiter', ','); % read in file
 
-num_rows = size(R,1);
-values = cell(num_rows,1);
- 
-  % Convert certain parameters to numbers, if requested
- for i = 1 : num_rows
-     
-  
-     if isnan(N(i,1))
-         values{i} = T(i,2);
-         
-     else
-    values{i} = N(i,~isnan(N(i,:)));
-  
-     end
-    
-  end % string 2 numb
-C = [T(:,1), values]'; % transform to cell array
+% Convert certain parameters to numbers, if requested
+if ~isempty(par2num)
+    % Find parameters
+    i = find(ismember(T.param, par2num));
+    % And convert
+    T.values(i) = cellfun(@str2num,  T.values(i),  ...
+    'UniformOutput',  false);
+end % string 2 numb
+
+C = [T.param, num2cell(T.values)]'; % transform to cell array
 
 p = struct(C{:}); % transform cell array to struct with param names as field names
-
 
 end

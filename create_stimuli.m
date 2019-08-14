@@ -1,11 +1,20 @@
-function [S,tconst] = create_stimuli(paramstxt,debug,session,discrete_trials,integration_window,ordered_coherences,filter_on)
+function [S,tconst] = create_stimuli(paramstxt,debug,session,discrete_trials,integration_window,ordered_coherences, vert_motion)
 
-% PURPOSE: This function creates either (1) continous random dot or (2) discrete 
-% random dot stimuli, by creating a structure 'S' which has all
-% the relevant stimulus information. (tconst is another structure which 
-% holds screen and PTB parameters.) This structure is then used when 
-% calling the rdk_continuous_motion function, to actually render the 
-% stimuli on the screen.
+% PURPOSE: This function creates either (1) continous random dot or 
+% (2) discrete random dot stimuli, by creating two structures: an S
+% structure, loaded with information on the X-Y position
+% of every dot in every frame, found in S.xy (and calculated by the
+% move_dots() function, called by init_stimuli.m). The second structure is
+% called tconst and holds screen and PTB parameters.
+% The S structure is then used by the rdk_continuous_motion function when
+% you call it, to actually render the stimuli (dots) on the screen.
+
+% NB. This task uses visual degrees to specify things like dot size. This 
+% allows us to control between labs/experiments/etc. for things like the
+% distance between a partipicant and the screen, the density of dots on the
+% screen, etc. The function takes in visual degrees, and transforms them 
+% into pixels using information about your screen that you have given it in
+% parameter.csv, such as the width and height.
 
 %%% continuous rdm version 
 % During a session of continous random dots, periods of incoherent and
@@ -25,7 +34,7 @@ function [S,tconst] = create_stimuli(paramstxt,debug,session,discrete_trials,int
 % different parameters in each session. (GUI is a WIP, where you will be
 % able to edit parameters straight away.)
 
-% To make this function run, change the root variable below to preferred
+% To make this function run, change the root variable below to a preferred
 % directory.
 
 % NB. This function uses PsychoToolBox (PTB)! Download and install it if
@@ -57,9 +66,9 @@ function [S,tconst] = create_stimuli(paramstxt,debug,session,discrete_trials,int
 %                               that first trials with -0.7/0.7 coherences 
 %                               are displayed in random order than trials with
 %                               -0.6/0.6 and so on 
-%
-% filter_on                 - flag, 1 use filtered white noise for
-%                               intertrial periods, 0 use jumping stimulus 
+% vert_motion = flag, 1 means you have vertical motion periods (as
+% controls) in discrete and continuous tasks, 0 means you don't
+
 
 
 
@@ -68,9 +77,8 @@ function [S,tconst] = create_stimuli(paramstxt,debug,session,discrete_trials,int
 % degrees!
 
 % subid                     - number assigned to participant 
-% subgender                 - f,m
+
 % subage                    - in years 
-% expday                    - dd/mm/yy
  
 % scrwidth                  - width of screen in mm 
 
@@ -155,7 +163,8 @@ function [S,tconst] = create_stimuli(paramstxt,debug,session,discrete_trials,int
 %                               3 = long ITIs, short integrations 
 %                               4 = long ITIs, long integrations
 
-% totaltrials               - total number of trials in discrete trials version 
+% totaltrials               - total number of trials (in discrete trials
+%                               version)
 
 % flex_feedback             - time participants can respond after coherent
 %                               stimulus was on in sec
@@ -232,7 +241,7 @@ function [S,tconst] = create_stimuli(paramstxt,debug,session,discrete_trials,int
 
 %%-- Output --%% 
 % Returns two structures that are important to run task with
-% rdk_contionous_motion
+% both discerete_rdk_trials_training and rdk_continuous_motion
 
 % S = structure with stimulus paramaters, trial info, the field 'vp' has 
 %   a copy of all the parameters in their original units 
@@ -252,30 +261,6 @@ function [S,tconst] = create_stimuli(paramstxt,debug,session,discrete_trials,int
 % Maria Ruesseler, University of Oxford 2018
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
- % Where stimuli are saved in subject specific folders 
- % this is in the EEG lab
- % NB. This can be changed by the user!
- 
- root =    'C:\experiments\Maria_contin_motion\stim';
- 
-% Neb: prompt user for root if want to change it
-%  temp_string = strcat('Would you like to change the path to where stimuli are saved? The current root is ', root, '. 1 = Yes, 0 = No\n');
-%  if input(temp_string)
-%      root = input('Please enter pathway to folder to save stimuli:');
-%  end
-%  clear temp_string;
-
-% This is on macs
-% root = '/Users/maria/Documents/data/data.continuous_rdk/EEG_pilot/stim/'; 
-
-% This is on eyetrack in test2 
-% root =    'C:\Users\student01\Desktop\maria_ruesseler\continuous_rdk_task\stim';
-
-  
-% Add this path to your MATLAB workspace 
-addpath(genpath(root));
-
 
 %%-- Define parameters for the session --%% 
 
@@ -331,21 +316,37 @@ par2num = {'subid';
     'str_train';
     'rewbarlocation';
     'rewbarsize';
-    'fixdotlocation'};
+    'fixdotlocation';
+    'reward';
+    'min_duration';
+    'max_duration'};
 
 % save the parameters from the xls file to the structure vpar 
 vpar = readparamtxt(paramstxt, par2num);
 
+% Where stimuli are saved in subject specific folders 
+% this is in the EEG lab
+% NB. This can be changed by the user in the parameter file!
+ 
+root = vpar.root_stim;
+
+% This is on macs
+% root = '/Users/maria/Documents/data/data.continuous_rdk/EEG_pilot/stim/'; 
+
+% This is on eyetrack in test2 
+% root =    'C:\Users\student01\Desktop\maria_ruesseler\continuous_rdk_task\stim';
+
+% Add this path to your MATLAB workspace 
+addpath(genpath(root));
+
 % add the session number to this parameter set 
 vpar.session = session; 
-
 
 % outdir - where we save output stimfile
 outfolder = sprintf('sub%03.0f',vpar.subid); % updated foldername for a subject
 outdir = fullfile(root,outfolder); % complete path to output folder 
 
 outfile = sprintf('sub%03.0f_sess%03.0f_stim.mat',vpar.subid,session); % updated filename
-
 
 % check whether a stimulus file for this session already exists
 if exist(outdir,'dir')  % check whether folder for subject exists first 
@@ -358,19 +359,18 @@ else % if folder for subject doesn't exist in stim folder then make one
     mkdir(outdir)
 end
 
-
 %% Neb: we can factorise init_task_param out from the IF statement as it's 
 % common to both clauses
 if discrete_trials % if discrete trials are used
     %%%--- initialise stimulus descriptor and screen parameters ---%%%
-    [S,tconst] = init_task_param(vpar,debug,discrete_trials,integration_window,ordered_coherences);
+    [S,tconst] = init_task_param(vpar,debug,discrete_trials,integration_window,ordered_coherences, vert_motion);
     %%%--- create rdks ---%%% 
-    [S] = init_stimulus(S,discrete_trials,tconst);
+    [S] = init_stimulus(S,discrete_trials,tconst, vert_motion);
 else % for continous motion session 
     %%%--- initialise stimulus descriptor and screen parameters ---%%%
-    [S,tconst] = init_task_param(vpar,debug,discrete_trials,integration_window,ordered_coherences);
+    [S,tconst] = init_task_param(vpar,debug,discrete_trials,integration_window,ordered_coherences, vert_motion);
     %%%--- create continuous rdks ---%%%
-    [S] = init_stimulus(S,discrete_trials,tconst,filter_on);
+    [S] = init_stimulus(S,discrete_trials,tconst, vert_motion);
 end % if discrete trials are used 
 
 %%%--- save file ---%%%

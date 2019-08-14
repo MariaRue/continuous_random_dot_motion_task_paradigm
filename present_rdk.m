@@ -1,6 +1,8 @@
-function [S,respMat,tconst] = present_rdk(S, tconst,training,outdir,outfile,rewardbar,EEG,elink,diode,annulus,fixdisp)
-% This function displays continuous rdks, records subject responses and
-% gives feedback to the subject
+function [S,respMat,tconst] = present_rdk(S, tconst,training,outdir,outfile,rewardbar,EEG,elink,diode,annulus, feedback)
+
+% PURPOSE: This function displays CONTINUOUS rdks (random dot kinetograms 
+% i.e. the coherent/incoherent motion of dots). During this, it records 
+% subject responses and gives feedback to the subject.
 
 % Input:
 %       S = structure with stimulus information
@@ -9,12 +11,14 @@ function [S,respMat,tconst] = present_rdk(S, tconst,training,outdir,outfile,rewa
 %       outfile = name of file in which behavioural response is saved
 %       rewardbar = flag, if 1 a reward bar is shown below stimulus, that
 %       fills up by reaching sixty points which equals 0.15£
+%       elink = flag, whether to initialise eye-tracking or not
 
-% Output: respMat = response matrix, as described in
-% rdk_continuyous_motion.mat - also saves respMat, tconst, S in file
-% specified in outfile and saves a reward_info.mat which is a file that
-% contains info about how much reward has been earned in a session that is
-% built on in the next session
+% Output:
+%   respMat = response matrix, as described in rdk_continous_motion.mat. 
+%               Also saves respMat, tconst, S in file specified in outfile 
+%               parameter, and saves a reward_info.mat which is used to
+%               carry over the reward into the next session
+%   modified S and tconst structures = already explained
 
 % Open window
 
@@ -33,7 +37,7 @@ if S.debug == 0 % hide cursor and suppress keyboard input in command window
     HideCursor;
 end
 
-PsychDefaultSetup(2);
+PsychDefaultSetup(2); % boilerplate initialisations
 screens = Screen('Screens');
 
 % get correct screen number for screen on which we want to show task
@@ -66,50 +70,52 @@ disp(['Response device is ' response_device '.']);
 % indes, also for some reason on my personal laptop I have to use the 2nd
 % entry, for other mac users it might be the first one
 if S.debug == 2 || S.debug == 3
-    device_number = keyboardIndices(2); % mac keyboard
+    device_number = keyboardIndices; % mac keyboard
 else
     device_number = keyboardIndices; % mac keyboard
 end
 
-% set time little point bar at end of reward bar is shown
-
+% set how long the little point bar at end of the rewardbar is shown for
 S.rewardcountdown = 0;
-% create queue to wait for button press from keyboard
+
+% create queue to wait for button press from keyboard (this is required for
+% us to be able to listen to keyboard responses from the participant)
 KbQueueCreate(device_number(1));
 
-missedflag = 0; % flag to signal that trial has been missed and that totalpoints have to be updated
+missedflag = 0; % This is a flag used to signal whether a trial has been 
+                % missed, and thus total points have to be reduced
 
-%%%--- load reward matrix if exists if not create one---%%%
+%%%--- load reward matrix if exists; if not, create one---%%%
 
 % This is the matrix saved in reward_info.mat that contains information
 % about reward earned in this session which is starting point for next
-% session (so that reward is carried over)
+% session (so that reward is carried over between sessions)
 
 % check whether a reward_info file exists
 reward_file = sprintf('sub%03.0f_reward_info.mat',S.vp.subid);
 if exist(fullfile(outdir,reward_file),'file') % if it does, load it
     matrix = load(reward_file);
     reward_matrix = matrix.reward_matrix;
-    S.coins_counter = reward_matrix(1,2); % money already won
-    S.totalPoints = reward_matrix(1,1); % how far reward bar has been filled up in last session
-else % if first session and reward matrix doesnt exist make one
+    S.coins_counter = reward_matrix(1,2); % load money already won
+    S.totalPoints = reward_matrix(1,1); % load how far reward bar has been
+                                        % filled up in last session
+else % if first session and reward matrix doesn't exist, make one
     reward_matrix = zeros(1,2);
-    S.coins_counter = 0;
-    S.totalPoints = 0;
-end % if reward_matrix exists
+    S.coins_counter = 0; % participants start with £0...
+    S.totalPoints = 0; % and no points in the reward bar.
+end 
 
-
-%%%% to save time call functions used in while loop through frames and call
-%%%% all screen functions to draw different feedback shapes (Matlab needs a
+%%%% to save time, call functions used in while loop through frames and call
+%%%% all screen functions to draw different feedback shapes (MATLAB needs a
 %%%% little bit of time to find all functions and to draw feedback shapes
-%%%% first time for some reason which leads to dropping frames)
+%%%% for the first time for some reason, which leads to dropping frames)
 
 % find moneybar function for reward bar
 [S.coins_counter,S.x_rect_old,textcoin,centeredRect,centeredFrame,centeredrewardRect,S.totalPoints,reward_m] = ...
     moneybar(S.x_rect_old,S.coins_counter,S.rewbarsize,S.centre(1), ...
-    S.centre(2),S.ap_radius,S.totalPoints,S.totalPointsbar,0,S.rewbarlocation);
+    S.centre(2),S.ap_radius,S.totalPoints,S.totalPointsbar,0,S.rewbarlocation, S.vp.reward);
 
-Screen('FrameRect',tconst.win,S.black,centeredFrame,4); % display frame of bar always black
+Screen('FrameRect',tconst.win,S.black,centeredFrame,4); % display frame of bar (always black)
 DrawFormattedText(tconst.win, textcoin, S.centre(1)+round(S.rewbarsize(1)/2)+30,...
     S.rewbarlocation(2), 0);
 
@@ -131,10 +137,10 @@ S.mean_coherence = S.mean_coherence_org;
 S.coherence_frame = S.coherence_frame_org;
 
 keydown = 0; % flag that keeps track whether a response has been made and
-% rewardbar needs to be updated, if 1 then rewardbar needs updating
+% thus rewardbar needs to be updated (if 1 then rewardbar needs updating)
 
 % pre-allocate cells to respMat matrix to record responses later on
-respMat = cell (numel(S.vp.condition_vec),1);
+respMat = cell(numel(S.vp.condition_vec),1);
 
 %%%%%----- setup eye tracker at start of each session ------%%%%%%%
 
@@ -180,7 +186,7 @@ if elink
     
     flipt = internal_eye_calibration(tconst.win,tconst.pixperdeg,S.centre,flipt);
     
-    % calibration finished, move on to main taks
+    % calibration finished, move on to main task
     text = ['Thank you. We will now move onto the task.'];
     Screen('TextSize',tconst.win,25);
     Screen('TextStyle',tconst.win,1);
@@ -191,11 +197,20 @@ end % eyelink
 
 %%%--- Task Instructions ---%%%
 
-% Simply present the instruction to the user.
+% set up some instructions as variables...
 coher_motion_text = 'In this task you will see a continuous stream of randomly moving dots (trial periods).\n\n You will have to respond every time you think that the dots are going mostly to the left or the right. \n\n Use the A key if dots move to the left, and the L key if dots move to the right.';
 block_info = ['You will do ',num2str(numel(S.vp.condition_vec)), ...
-    ' blocks of ',num2str(S.vp.block_length), ' minutes each.\n\n At the beginning of each block, you will be told how frequent and how long trial periods will be.'];
-feedback_info = ['After every button press you will be given feedback. \n\n The fixation dot in the centre of the moving dots will change its colour. \n\n You can win points for correct button presses and lose points for incorrect or missed button presses. \n\n Green: correct response during trial period \n\n Red: incorrect response during trial period \n\n Yellow: Response during random motion (too early) \n\n Blue: Missed trial period (too late)'];
+    ' blocks of ',num2str(S.vp.block_length), ' minutes each.\n\n At', ...
+    ' the beginning of each block, you will be told how frequent and', ...
+    ' how long trial periods will be.'];
+feedback_info = ['After every button press you will be given', ...
+    ' feedback.\n\n The fixation dot in the centre of the moving dots', ...
+    ' will change its colour. \n\n You can win points for correct', ...
+    ' button presses and lose points for incorrect or missed button', ...
+    ' presses. \n\n Green: correct response during trial period', ...
+    ' \n\n Red: incorrect response during trial period', ...
+    ' \n\n Yellow: Response during random motion (too early)', ...
+    ' \n\n Blue: Missed trial period (too late)'];
 
 DrawFormattedText(tconst.win, coher_motion_text, 'center', 'center', 0);
 Screen('Flip',tconst.win);
@@ -220,10 +235,14 @@ if training % task instructions
     KbStrokeWait(device_number) % next block starts after participant presses button
 end
 
+% get font name to fix bugs
+Screen('TextFont', tconst.win)
+
 %%%--- START TASK ---%%%
-block_time = tic; % time how long it takes to run a block - together with toc furter down at end of loop
-% loop through the different blocks of different conditions of integration
-% and intertrial interval (ITI) periods
+block_time = tic; % time how long it takes to run a block - together with 
+% toc furter down at end of loop, loop through the different blocks of 
+% different conditions of integration (i.e. trial length) and intertrial
+% interval (ITI) periods (i.e. trial frequency)
 for block = 1:numel(S.vp.condition_vec)
     if EEG
         % set up IO path for sending triggers  in EEG
@@ -236,22 +255,21 @@ for block = 1:numel(S.vp.condition_vec)
         trig.holdvalue = 0;
     end % EEG
     
-    % define triggers to be sent to EEG recorder
-    
+    %%% DEFINE TRIGGERS SENT TO EEG %%%
     S.trig.coherent_motion_fb_right = 201; % trigger that gets send everytime person hits right button during coherent motion
     S.trig.coherent_motion_fb_left = 205; % same, but for left
-    S.trig.coherent_motion_missed = 203; % every time person missed to respond to coherent motion
-    S.trig.resp_incoherent_motion_right = 202;% every time person pressed right button during incohrent motion
-    S.trig.resp_incoherent_motion_left = 206;
+    S.trig.coherent_motion_missed = 203; % every time person missed response to coherent motion
+    S.trig.resp_incoherent_motion_right = 202;% every time person pressed right button during incoherent motion
+    S.trig.resp_incoherent_motion_left = 206; % Neb: same as above, but for left?
     S.trig.trigger_per_10_secs = 11;% trigger for counting minutes and 10seconds of time passed
     S.trig.last_frame = 210; % trigger send on last frame
     S.trig.trigger_min = 12;% for updating trigger code every time minute is
-    S.trig.incoh_motion = 23; % trigger for onset of incoh motion
+    S.trig.incoh_motion = 23; % trigger for onset of incoherent motion
     % full, full minute is a value between 11 and 19 that gets updated every
     % time a minute is hit, for 10seconds it is a 3 digit code starting at 102
     S.trig.jump = 24;
-    
-    trig_num = 0; % initialise counter for sending a trigger every S.trig_thresh jump
+    % initialise counter for sending a trigger every S.trig_thresh jump
+    trig_num = 0; 
     
     %%%--- Display Block Information ---%%%
     
@@ -293,7 +311,7 @@ for block = 1:numel(S.vp.condition_vec)
     DrawFormattedText(tconst.win, info_text, 'center', S.centre(2)-200, 0);
     Screen('Flip',tconst.win);
     
-    % Wait for (any) keyboard button
+    % Wait for (any) button press
     KbStrokeWait(device_number);
     KbEventFlush(device_number);
     KbQueueStop(device_number);
@@ -301,8 +319,10 @@ for block = 1:numel(S.vp.condition_vec)
     
     resp_counter = 2; % index (idx) for counting rows in response Matrix
     tstart = 0; % used to get time on first coherent motion frame of a 
-    % trial and to calculate rt later
+                % trial and to calculate rt later
     
+    % create a feedback structure (Fb) which contains some important
+    % variables for the running of the task (see documentation)
     Fb.feedback_countdown = 0; % set to a certain number of frames for 
                                % which fb will be displayed
     trial = 0; % trial counter - needed to idx into epochs (trials) of 
@@ -334,7 +354,6 @@ for block = 1:numel(S.vp.condition_vec)
     keypress = cell(100,3);
     
     %%%--- display coherent and incoherent motion for duration of total time---%%%
-    
     % save how often we loop through the WHILE loop, and how long each 
     % loop takes
     
@@ -353,7 +372,6 @@ for block = 1:numel(S.vp.condition_vec)
     trigger_time_min = 1; % save start time of stimulus for sending triggers every minute
     S.trigger_vals{block} = nan(S.totalframes_per_block,1);
     while f <= S.totalframes_per_block % loop through all frames of block
-        
         if EEG || elink % set trigger back to 0 so that we can record next trigger
             current_trigger_value = trig.holdvalue;
             if f == 1 && (EEG || elink)  % send trigger on first frame of block this is first trigger of 10 secs interspersed triggers and is 11
@@ -379,16 +397,18 @@ for block = 1:numel(S.vp.condition_vec)
         end % if EEG
 
         if f == S.totalframes_per_block && (EEG || elink)
-            current_trigger_value = S.trig.last_frame; % send trigger
+            current_trigger_value = S.trig.last_frame; % send trigger: it's
+                                                       % the last frame
         end
         
         % send EEG trigger every 10 seconds
-        trigger_time_2 = f; % this measures time that has passed and is used in the following
-        % if statement whether 10 seconds since the last trigger have passed,
-        % if so this time gets the new start time and the process repeats,
-        % every time we have a full minute we update the minute variabe with time_2 value
-        % and change the trigger to a 2 digit code (all other times a 3 digit code is used)
-        % time is measured in number of frames
+        trigger_time_2 = f; % this measures time that has passed and is 
+        % used in the following IF statement (whether 10 seconds since the 
+        % last trigger have passed), if so this time gets the new start 
+        % time and the process repeats, every time we have a full minute we
+        % update the minute variable with time_2 value and change the 
+        % trigger to a 2 digit code (all other times a 3 digit code is 
+        % used) time is measured in number of frames
         if (EEG || elink) && trigger_time_2 >= trigger_time_1 + 600
             if trigger_time_2 >= trigger_time_min + 3600 % if we pass 1 minute change trigger code to 2 digit between 11 and 19
                 trigger_time_min = trigger_time_2; % update old time that indicates when minute started
@@ -410,10 +430,14 @@ for block = 1:numel(S.vp.condition_vec)
         S.f{block}(f) = f;
         
         % trial counter needed for feedback to know in which coherent
-        % motion period (i.e. trial) we are in
+        % motion period (i.e. trial) we are in; also sends EEG triggers
+        % corresponding to current trial coherence
         if abs(S.mean_coherence{block}(f)) > 0 && abs(S.mean_coherence{block}(f-1)) == 0
+            % trial counter only updates if current frame is > 0 coherence
+            % (i.e. trial) and last frame was exactly 0 (i.e. ITI)
             trial = trial+1;
             S.coh_check = S.mean_coherence{block}(f);
+            % set starting frame of trial to be current frame
             S.start_frame_trial = f;
             % send EEG trigger that next coherent motion period is starting
             if EEG || elink
@@ -429,15 +453,20 @@ for block = 1:numel(S.vp.condition_vec)
         if S.rewardcountdown > 0 %% S. % if keydown = 1 update reward bar, because on last
                 % frame a response occured or coherent motion period has been missed
             if keydown || missedflag == 1
+                % update totalPoints if we made a response or missed trial
                 S.totalPoints = S.totalPoints + respMat{block}(resp_counter-1,1);
                 missedflag = 0;
             end
                
-                % calculate how far rewardbar is filled and how many $ won
-            [S.coins_counter,S.x_rect_old,textcoin,centeredRect,centeredFrame,centeredrewardRect,S.totalPoints,reward_m] = ...
-                moneybar(S.x_rect_old,S.coins_counter,S.rewbarsize,S.centre(1), ...
-                S.centre(2),S.ap_radius,S.totalPoints,S.totalPointsbar,respMat{block}(resp_counter-1,1),S.rewbarlocation);
-        end % if key down
+            % calculate (update) how far rewardbar is filled and how much
+            % money won
+            [S.coins_counter, S.x_rect_old, textcoin, centeredRect, ...
+            centeredFrame, centeredrewardRect, S.totalPoints, reward_m]=...
+            moneybar(S.x_rect_old, S.coins_counter, S.rewbarsize, ...
+            S.centre(1), S.centre(2), S.ap_radius, S.totalPoints, ...
+            S.totalPointsbar, respMat{block}(resp_counter-1,1), ...
+            S.rewbarlocation, S.vp.reward);
+        end
             
         if rewardbar % if reward bar is shown under stimuli
             if S.totalPoints > 0 % depending on totalPoints reward bar is either green or red
@@ -470,39 +499,68 @@ for block = 1:numel(S.vp.condition_vec)
             end % Fb.feedback_countdown >= 0.5 * Fb.feedback_countdown
         end % if rewardbar
 
-        % Submit drawing instructions of moving dots to PTB
+        %%% SUBMIT DOT DRAWING INSTRUCTIONS TO PTB
+        % This is where the drawing of the dots occurs (in these following
+        % lines of code).
 
         if diode % if we test screen flip with photo diode display square in upper left corner that changes between black and white from frame to frame
             Screen('FillRect',tconst.win, abs(S.square_diode_colour), S.square_diode_centred);
             S.square_diode_colour = abs(S.square_diode_colour)-1;
         end % diode
         
-        % draw rdk dots
-        Screen('DrawDots' , tconst.win , S.xy{block}(:,:,f), S.dotdiameter, S.black,...
+        % Draw rdk dots
+        % Parsing the 'Screen()' function and its parameters:
+        % NB. All the dots' positions (and on which frame) were already set
+        % up earlier by init_stimulus, and saved in the S.xy matrix
+        Screen('DrawDots', tconst.win, S.xy{block}(:,:,f), S.dotdiameter, S.black,...
             S.centre, S.vp.dot_type);
-
-        % draw annulus
+        % For debugging (draws X/Y coordinates on dot)
+        % DrawFormattedText(tconst.win, ['x:' ...
+        %     num2str(S.xy{block}(1,1,f)) ' y:' ...
+        %     num2str(S.xy{block}(2,1,f))], ...
+        %     S.centre(1)+S.xy{block}(1,1,f), ...
+        %     S.centre(2)+S.xy{block}(2,1,f), 0);
+%         % Frame counter
+%         DrawFormattedText(tconst.win, num2str(f), S.centre(1)-500, ...
+%             S.centre(2)-500, 0);
+%         % Other counters
+%         % Coherence
+%         DrawFormattedText(tconst.win, num2str(S.coherence_frame{block}(f)), ...
+%             S.centre(1)+500, S.centre(2)-700, 0);
+%         % Vert. coherence
+%         DrawFormattedText(tconst.win, num2str(S.coherence_frame_v{block}(f)), ...
+%             S.centre(1)+500, S.centre(2)-600, 0);
+%         % Sum
+%         DrawFormattedText(tconst.win, num2str( ...
+%             abs(S.coherence_frame{block}(f)) + ...
+%             abs(S.coherence_frame_v{block}(f)) ), ...
+%             S.centre(1)+500, S.centre(2)-500, 0);
+        
+        % draw annulus, if it's turned on
         if annulus
             Screen('FillOval', tconst.win, S.grey, S.annulus_rect, S.annulus_diameter);
         end
         
-        % display feedback for specified time after button has been pressed or
-        % coherent motion has been missed Fb.feedback_countdowns is set below
-        % in feedback loop. fix dot changes colour and shape with respect
+        % display feedback for specified time after button has been pressed
+        % or coherent motion has been missed Fb.feedback_countdowns is set
+        % below in feedback loop. Fix dot changes colour with respect to
         % to response particitant made
         if Fb.feedback_countdown > 0
-            Fb.feedback_countdown = Fb.feedback_countdown -1; % count down time  in which fb has been presented
+            Fb.feedback_countdown = Fb.feedback_countdown -1; % count down
+            % time in which feedback has been presented
             
+            %%% COLOUR FIX DOT %%%
             % correct or incorrect response during coherent motion = dot
             if respMat{block}(resp_counter-1,7) == 0 || respMat{block}(resp_counter-1,7) == 1 ...
                     || respMat{block}(resp_counter-1,7) == 2 || respMat{block}(resp_counter-1,7) == 3
                 colour = Fb.colour;
-            elseif  training == 1
-                if  S.mean_coherence{block}(f) ~= 0 % this is defined by the
-                    % previous trial having a mean coherence of 0 in contrast to the current
+            elseif training == 1
+                if S.mean_coherence{block}(f) ~= 0 % this is defined by 
+                    % the previous trial having a mean coherence of 0 in 
+                    % contrast to the current
                     
-                    % Draw the fixation cross in white, set it to the center of our screen and
-                    % set good quality antialiasing
+                    % Draw the fixdot in white, set it to the center of our
+                    % screen and set good quality antialiasing
                     colour = [0.8 0.8 0.8];
                 else
                     colour = S.black;
@@ -512,15 +570,16 @@ for block = 1:numel(S.vp.condition_vec)
             end
         else
             colour = S.black;
-            if  training && S.mean_coherence{block}(f) ~= 0 % this is defined by the
-                % previous trial having a mean coherence of 0 in contrast to the current
+            if  training && S.mean_coherence{block}(f) ~= 0 % if we are
+                % training *and* in a trial...
                 
-                % Draw the fixation cross in white, set it to the center of our screen and
-                % set good quality antialiasing
+                % Draw the fixdot in white, set it to the center of our 
+                % screen and set good quality antialiasing
                 colour = [0.8 0.8 0.8];
             end
         end % draw fb on screen
 
+        % is the fix dot a square (long ITIs) or circle (short ITIs)?
         switch shape
             case 'S'
                 Screen('FillRect',tconst.win,colour,size)
@@ -535,8 +594,9 @@ for block = 1:numel(S.vp.condition_vec)
         % get start time of first coherent motion frame of each trial
         if f > 1
             if S.mean_coherence{block}(f-1) == 0 && abs(S.mean_coherence{block}(f)) ~= 0
-                % this is defined by the previous trial heaving a mean coherence of 0 in contrast to the current
-                tstart = GetSecs;
+                % this is defined by the previous trial heaving a mean 
+                % coherence of 0 in contrast to the current
+                tstart = GetSecs; % the start time
                 S.coh_f{block}(counter_coh,:) = [f, tstart];
                 counter_coh = counter_coh + 1;
             end
@@ -546,16 +606,17 @@ for block = 1:numel(S.vp.condition_vec)
         
         fliptimes(f) = flipt;
         
-        if f > S.flex_feedback+1 % check whether coherent motion stim has been missed if frame number is at least 2
+        %%% CHECKING WHETHER TRIALS HAS BEEN MISSED %%%
+        if f > S.flex_feedback+1 % check whether coherent motion stim has been missed if frame number is greater than trial length + flexible feedback allowance
             if resp_counter == 2 % if response counter has not been updated yet, we don't need to calculate the time between now and the last response made
-                if S.start_frame_trial + S.block_coherent_cells{block} + S.flex_feedback + 1 == f && S.start_frame_trial ~= 0
+                if S.start_frame_trial + S.block_coherent_cells{block} + S.flex_feedback + 1 == f && S.start_frame_trial ~= 0 % IF coherent motion missed
                     % coherent motion has been missed in case the current frame
                     % has 0 mean coherence and the frame 500ms or flex_feedback frames
-                    % before has a mean coherence  not
+                    % before has a mean coherence not
                     % equal to 0 only if no response has been made yet
                     
                     % fill response matrix accordingly
-                    respMat{block}(resp_counter,1) = S.vp.point(4); %points lost
+                    respMat{block}(resp_counter,1) = S.vp.point(4); % points lost
                     respMat{block}(resp_counter,3) = 2; % choice missed
                     respMat{block}(resp_counter,4) = S.mean_coherence_org{block}(f-1); % coherence of missed coherent motion
                     respMat{block}(resp_counter,5) = 0; % choice incorrect
@@ -568,10 +629,12 @@ for block = 1:numel(S.vp.condition_vec)
                     % increase counter for index into respMat
                     resp_counter = resp_counter + 1;
                     
-                    S.rewardcountdown = 2 .* S.rewardbartime; % this is the time the points won bar at
-                    %  end of reward bar is shown first in white and then in green and red for won and lost
-                    % respectively, this is why we have to doulbe this variable, because we want bar in white
-                    % and green/red to be displayed same amount of time
+                    S.rewardcountdown = 2 .* S.rewardbartime; % this is the
+                    % time the "points won" bar at the edge of reward bar 
+                    % is shown first in white and then in green and red for
+                    % won and lost respectively (thus, we must double the
+                    % variable, as both white and green/red should be shown
+                    % for the same length of time)
                     
                     keydown = 1;
                     missedflag = 1;
@@ -582,7 +645,7 @@ for block = 1:numel(S.vp.condition_vec)
                 else
                     keydown = 0; % coherent motion has not been missed don't re-calculate reward bar
                 end % if coherent stim has been missed
-            else % if resonse counter is above 2, we need to take into account the amount of time since last time response has been made
+            else % if response counter is above 2, we need to take into account the amount of time since last time response has been made
                 if S.start_frame_trial + S.block_coherent_cells{block} + S.flex_feedback + 1 == f && S.start_frame_trial ~= 0 && (f - respMat{block}(resp_counter - 1,6)) >= S.block_coherent_cells{block}+S.flex_feedback
                     % coherent motion has been missed in case the current frame
                     % has 0 mean coherence and the frame 500ms or flex_feedback frames
@@ -613,7 +676,7 @@ for block = 1:numel(S.vp.condition_vec)
                     resp_counter = resp_counter + 1;
                     
                     S.rewardcountdown = 2 .* S.rewardbartime; % this is the time the points won bar at
-                    %  end of reward bar is shown first in white and then in green and red for won and lost
+                    % end of reward bar is shown first in white and then in green and red for won and lost
                     % respectively, this is why we have to doulbe this variable, because we want bar in white
                     % and green/red to be displayed same amount of time
                     
@@ -628,43 +691,44 @@ for block = 1:numel(S.vp.condition_vec)
         end % if frame > 1
 
         % check for subject response
-        [keyIsDown,firstpress] = KbQueueCheck(device_number(1)); % check wheter arrow key has been pressed
+        [keyIsDown,firstpress] = KbQueueCheck(device_number(1)); % check whether left/right key has been pressed
         
         % if key has been pressed fill response matrix and prepare display of
         % feedback
         
+        %%% PARTICIPANT PRESSED KEY -> CHECK FOR CORRECT/INCORRECT RESPONSE %%%
         if keyIsDown % if any key has been pressed on current frame
             rts = GetSecs;
-            % check whether this button is a response key : left or right
-            % key if yes check for coherence and determine what sort of
-            % response, correct, incorrect, during incohrent motion it is,
-            % if other key has been pressed save which key it was and frame
-            %
-            % if we are not in a feedback loop at the moment count this as
-            % actual response if not just save the button that has been
-            % pressed and on which frame and its coherence
-            
+            % Check whether this button is a response key: left or right
+            % key. If yes, check for coherence and determine what sort of
+            % response (correct or incorrect) during incoherent motion it 
+            % is; if another key has been pressed, save which key it was, 
+            % on which frame it was pressed, and coherence level
             if Fb.feedback_countdown <= 0
+                %%% IF PARTICIPANT PRESSED LEFT %%%
                 if firstpress(leftkey) > 0
                     keydown = 1;
                     
                     Fb.feedback_countdown  = S.feedback_frames; % amount feedback in form of changing fixdot is shown
-                    S.rewardcountdown = 2 .* S.rewardbartime; % this is the time the points won bar at
-                    %             %  end of reward bar is shown first in white and then in green and red for won and lost
-                    %             % respectively, this is why we have to doulbe this variable, because we want bar in white
-                    %             % and green/red to be displayed same amount of time
+                    S.rewardcountdown = 2 .* S.rewardbartime; % this is the time the "points won" bar at
+                                 % end of reward bar is shown first in white and then in green and red for won and lost
+                                 % respectively, this is why we have to double this variable, because we want bar in white
+                                 % and green/red to be displayed same amount of time
                     
-                    respMat{block}(resp_counter,2) =  rts - tstart; % rt
+                    respMat{block}(resp_counter,2) = rts - tstart; % rt 
+                    % (Neb: response time? This is the difference between
+                    % the time of pressing some key, and the time of the 
+                    % first frame of the first coherent block)
                     respMat{block}(resp_counter,3) = 0; % choice - 0 left, 1 right
                     respMat{block}(resp_counter,4) = S.mean_coherence{block}(f); % coherence on trial
                     respMat{block}(resp_counter,6) = f; % frame on which button press occured
                     
-                    if S.mean_coherence{block}(f) > 0 % for leftkey
+                    if S.mean_coherence{block}(f) > 0 % INCORRECT (i.e. if mean coherence is > 0, then dots moving to RIGHT, so incorrect button has been pressed...)
                         respMat{block}(resp_counter,1) = S.vp.point(2); % points lost
                         respMat{block}(resp_counter,5) = 0; % choice correct = 1/incorrect = 0
-                        respMat{block}(resp_counter,7) = 0;
+                        respMat{block}(resp_counter,7) = 0; % ???
                         
-                        Fb.colour = S.red; % colour of FB
+                        Fb.colour = S.red; % colour of FB (red, b/c incorrect choice)
                         [S,start_f] = recalculate_xy_position(S,f,trial,block,start_f); % get incoherent frames for reminder of coherent motion period
                         resp_counter = resp_counter + 1; % increase counter for row in response matrix
                         
@@ -674,12 +738,12 @@ for block = 1:numel(S.vp.condition_vec)
                             %                             io64( trig.portobject, trig.portaddress, S.trig.coherent_motion_fb_left);
                             current_trigger_value = S.trig.coherent_motion_fb_left;
                         end
-                    elseif S.mean_coherence{block}(f) < 0
-                        respMat{block}(resp_counter,1) = S.vp.point(1); % points lost
+                    elseif S.mean_coherence{block}(f) < 0 % CORRECT (mean coh < 0 so dots moving LEFT, so CORRECT key was pressed)
+                        respMat{block}(resp_counter,1) = S.vp.point(1); % points lost (Neb: Gained?)
                         respMat{block}(resp_counter,5) = 1; % choice correct = 1/incorrect = 0
                         respMat{block}(resp_counter,7) = 1;
                         
-                        Fb.colour = S.green; % colour of FB
+                        Fb.colour = S.green; % colour of FB (green, b/c correct choice)
                         [S,start_f] = recalculate_xy_position(S,f,trial,block,start_f); % get incoherent frames for reminder of coherent motion period
                         resp_counter = resp_counter + 1; % increase counter for row in response matrix
                         
@@ -687,15 +751,14 @@ for block = 1:numel(S.vp.condition_vec)
                         
                         
                         if  EEG || elink % send trigger if responded to coherent motion
-                            %                             io64( trig.portobject, trig.portaddress, S.trig.coherent_motion_fb_left);
                             current_trigger_value = S.trig.coherent_motion_fb_left;
                         end
-                    else
+                    else %%% INCORRECT because WASN'T IN TRIAL (i.e. participant thought there was coherence, but there wasn't)
                         respMat{block}(resp_counter,1) = S.vp.point(3); % points lost
                         respMat{block}(resp_counter,5) = 0; % choice correct = 1/incorrect = 0
                         respMat{block}(resp_counter,7) = 2;
                         
-                        Fb.colour = S.yellow; % colour of FB
+                        Fb.colour = S.yellow; % colour of FB (yellow, since participant wasn't in a trial)
                         resp_counter = resp_counter + 1; % increase counter for row in response matrix
                         
                         
@@ -703,7 +766,7 @@ for block = 1:numel(S.vp.condition_vec)
                             current_trigger_value =  S.trig.resp_incoherent_motion_left;
                         end
                     end % mean coherence > 0 for left key
-                    
+                %%% OTHERWISE, IF PARTICIPANT PRESS RIGHT %%%
                 elseif firstpress(rightkey) > 0
                     keydown = 1;
                     
@@ -718,24 +781,24 @@ for block = 1:numel(S.vp.condition_vec)
                     respMat{block}(resp_counter,4) = S.mean_coherence{block}(f); % coherence on trial
                     respMat{block}(resp_counter,6) = f; % frame on which button press occured
 
-                    if S.mean_coherence{block}(f) > 0 % for right key
+                    if S.mean_coherence{block}(f) > 0 % CORRECT response (mean coh > 0, so dots moving right)
                         respMat{block}(resp_counter,1) = S.vp.point(1); % points lost
                         respMat{block}(resp_counter,5) = 1; % choice correct = 1/incorrect = 0
                         respMat{block}(resp_counter,7) = 1;
                         
-                        Fb.colour = S.green; % colour of FB
+                        Fb.colour = S.green; % colour of FB (green b/c correct)
                         [S,start_f] = recalculate_xy_position(S,f,trial,block,start_f); % get incoherent frames for reminder of coherent motion period
                         resp_counter = resp_counter + 1; % increase counter for row in response matrix
                           S.start_frame_trial = 0;
                         if  EEG || elink% send trigger if responded to coherent motion
                             current_trigger_value =  S.trig.coherent_motion_fb_right;
                         end
-                    elseif S.mean_coherence{block}(f) < 0
+                    elseif S.mean_coherence{block}(f) < 0 % INCORRECT response (mean coh < 0, so dots moving left)
                         respMat{block}(resp_counter,1) = S.vp.point(2); % points lost
                         respMat{block}(resp_counter,5) = 0; % choice correct = 1/incorrect = 0
                         respMat{block}(resp_counter,7) = 0;
                         
-                        Fb.colour = S.red; % colour of FB
+                        Fb.colour = S.red; % colour of FB (red b/c incorrect)
                         [S,start_f] = recalculate_xy_position(S,f,trial,block,start_f); % get incoherent frames for reminder of coherent motion period
                         resp_counter = resp_counter + 1; % increase counter for row in response matrix
                         
@@ -744,18 +807,20 @@ for block = 1:numel(S.vp.condition_vec)
                         if  EEG || elink % send trigger if responded to coherent motion
                             current_trigger_value = S.trig.coherent_motion_fb_right;
                         end
-                    else
+                    else % INCORRECT b/c WASN'T IN TRIAL 
                         respMat{block}(resp_counter,1) = S.vp.point(3); % points lost
                         respMat{block}(resp_counter,5) = 0; % choice correct = 1/incorrect = 0
                         respMat{block}(resp_counter,7) = 2;
                         
-                        Fb.colour = S.yellow; % colour of FB
+                        Fb.colour = S.yellow; % colour of FB (yellow)
                         resp_counter = resp_counter + 1; % increase counter for row in response matrix
                         if  EEG || elink% send trigger if responded to incoherent motion
                             current_trigger_value =  S.trig.resp_incoherent_motion_right;
                         end
                     end % mean coherence > 0 for right key
-                else % other button then left or right key is pressed
+                %%% OTHERWISE, PARTICIPANT PRESSED ANOTHER KEY (other than
+                %%% designated left or right key)
+                else
                     keydown = 0;
 
                     % save which key has been pressed and in what frame
@@ -836,7 +901,7 @@ for block = 1:numel(S.vp.condition_vec)
     S.keypress{block} = keypress;
     S.last_trigger = idx_last_trigger;
     
-    %%%--- take a break after each block---%%%
+    %%% BLOCK ENDED, TELL PARTICIPANT TO TAKE A BREAK %%%
     
     % display how long block was
     
@@ -849,6 +914,8 @@ for block = 1:numel(S.vp.condition_vec)
     S.total_possible_points = trial .* S.vp.point(1);
     
     % index to correct button responses during coherent motion
+    % (i.e. S.idx_correct contains indices of all correct responses in
+    % respMat, need use it for plotting, also below)
     S.idx_correct = respMat{block}(:,7) == 1;
     
     % index to incorrect button presses during coherent motion
@@ -868,7 +935,13 @@ for block = 1:numel(S.vp.condition_vec)
 
     % text displayed after block finished
     
-    text = 'Well done! \n \n Please take a break. \n You can look away from the screen.';
+    if feedback == 0
+        text = ['Well done! \n \n Please take a break. \n You can ' ...
+        'look away from the screen.'];
+    else
+        text = ['Well done! \n \n Please take a break. \n You can ' ...
+        'look away from the screen.\n \nPress any key to see feedback.'];
+    end
     
     DrawFormattedText(tconst.win, text, 'center', 'center', 0);
     Screen('Flip',tconst.win);
@@ -883,7 +956,7 @@ for block = 1:numel(S.vp.condition_vec)
     % mean coherence
     % coherence frame
     % trigger_vals
-    %
+    
     B.total_coins_earned    = S.total_coins_earned;
     B.stimonsettimes        = S.stimonsettimes;
     B.missbeam              = S.missbeam;
@@ -901,12 +974,41 @@ for block = 1:numel(S.vp.condition_vec)
     B.coherence_frame       = S.coherence_frame;
     B.session               = S.vp.session;
     B.subid                 = S.vp.subid;
+    B.task_date            = date; % save the date of the task as well!
     
     % after all blocks finished save response data, and S and tconst structs
     savePath = fullfile(outdir,outfile);
     save(savePath,'respMat','B','tconst');
     
-    WaitSecs(2);
+    if feedback == 1
+        KbStrokeWait(device_number) % next block starts after participant presses button
+
+        % get screen width and height so we can create a fullscreen figure
+        % in plot_feedback()
+        [scrWidth, scrHeight] = Screen('WindowSize', tconst.win);
+        Screen('Close', tconst.win);
+        plot_feedback(1, block,respMat, S.mean_coherence, S.coherence_frame, S.vp.condition_vec, scrWidth, scrHeight);
+        drawnow();
+        KbStrokeWait(device_number) % next block starts after participant presses button
+        if S.debug == 1 || S.debug == 3
+            [tconst.win,tconst.rect]= PsychImaging('OpenWindow', tconst.winptr,S.grey,[0 0 1048 786]);
+        else % use full screen window
+            [tconst.win,tconst.rect]= PsychImaging('OpenWindow', tconst.winptr, S.grey);
+        end
+
+        if block ~= numel(S.vp.condition_vec)
+            text = 'Press any key to continue to the next block.';
+        else
+            text = 'You are done with this session!\n\nPress any key to exit.';
+        end
+
+        DrawFormattedText(tconst.win, text, 'center', 'center', 0);
+        Screen('Flip',tconst.win);
+    end
+    
+    KbStrokeWait(device_number) % next block starts after participant presses button
+    close all; % delete figures...
+    
     Screen('FrameRect',tconst.win,S.black,centeredFrame,4); % display frame of bar always black
     DrawFormattedText(tconst.win, textcoin, S.centre(1)+round(S.rewbarsize(1)/2)+30,...
        S.rewbarlocation(2), 0);
@@ -916,10 +1018,7 @@ for block = 1:numel(S.vp.condition_vec)
     else 
         Screen('FillRect',tconst.win,S.red, centeredRect); % display bar  
     end 
-
-    Screen('Flip',tconst.win);
     
-    KbStrokeWait(device_number) % next block starts after participant presses button
     
     ListenChar(0);
     
@@ -932,7 +1031,6 @@ for block = 1:numel(S.vp.condition_vec)
     end
 end % loop through blocks
 
-
 if elink % close eyelink (eye tracker) and save file
     Eyelink('StopRecording'); % Niks code
     Eyelink('CloseFile');
@@ -944,19 +1042,14 @@ KbQueueStop;
 % close PTB window
 sca;
 
+%%% PLOT PERFORMANCE %%%
+% We have just ended a block, time to plot performance
+if feedback == 2
+    % get screen size
+    [scrWidth, scrHeight] = Screen('WindowSize', tconst.win);
+    % actually plot feedback for all blocks
+    plot_feedback(2, 0, respMat, S.mean_coherence, S.coherence_frame, ...
+        S.vp.condition_vec, scrWidth, scrHeight);
+end
+
 end % stimulus present function
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
