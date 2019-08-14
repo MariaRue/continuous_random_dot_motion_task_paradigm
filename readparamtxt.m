@@ -1,8 +1,7 @@
 function [p] = readparamtxt(param_file, par2num)
 
-% this function reads in parameters from a .csv file (param_txt) - This
-% contains a table with different parameters we might want to change
-
+% PURPOSE: this function reads in parameters from a .csv file (param_file)
+% which contains the different parameters of the task we may wish to change
 
 % expID = mac or 7ts
 % expday = year,month,day

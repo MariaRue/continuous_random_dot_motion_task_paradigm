@@ -1,13 +1,14 @@
 function [S,tconst] = init_task_param (vpar,debug,discrete_trials,integration_window,ordered_coherences, vert_motion)
 
 % PURPOSE: This function is important for the initialisation of a session. 
-% It initiates (?) screen and computer parameters important for the screen
+% It initiates screen and computer parameters important for the screen
 % settings in the task such as pixel size of screen and flip interval and
-% saves it in the tconst structure. Sets
-% parameters and transforms parameters from the .csv file in units appropriate 
-% for PTB, i.e. transform visual degrees in pixels. All parameters more stimulus specfic, 
-% i.e. dot size, speed of dots etc. are kept in the structure S for Stimulus. 
-% It also keeps a copy of all initial parameters specified in the .csv file under S.vp. 
+% saves it in the tconst structure. 
+% Sets parameters and transforms parameters from the .csv file in units 
+% appropriate for PTB, i.e. transform visual degrees in pixels. All 
+% parameters more stimulus specfic, i.e. dot size, speed of dots etc. are 
+% kept in the structure S for Stimulus. It also keeps a copy of all initial
+% parameters specified in the .csv file under S.vp. 
 %
 % Additionally, in this file, we initiate the metpixperdeg() function,
 % which converts visual degrees (found in the .csv parameters file) to

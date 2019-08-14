@@ -7,45 +7,29 @@ function [xy, coherence_frame, coherence_frame_v, mean_coherence, ...
     passbandfreq, stopbandfreq, passrip, stopbandatten, framerate, ...
     noise_amplitude, mean_duration, sd_duration, noise_function, ...
     stim_function, step_v, iti_vec_v, cohs_v, vert_motion)
-% This function creates the dots' X/Y positions for discrete trials or 
-% continuous blocks of motion and saves those coordinates for *each* frame.
-% Thus, every dot has its own X/Y coordinates for each frame, and
-% all of this is saved in the matrix 'xy' which is output. This matrix is
-% then used to render all the dots in either discrete_rdk_trials_training
-% (when doing discrete trials) or present_rdk (when doing continous trials)
-%
+% PURPOSE: This function creates the dots' X/Y positions for discrete  
+% trials or continuous blocks of motion and saves those coordinates for 
+% *each* frame. Thus, every dot has its own X/Y coordinates for each frame, 
+% and all of this is saved in the output matrix 'xy'. This matrix is then
+% used to render all the dots in either discrete_rdk_trials_training (when
+% doing discrete trials) or present_rdk (when doing continous trials).
+
 % NB. The two coherences (for horizontal movement and vertical movement)
 % added together cannot be more than 1, as then you get diagonal movement,
 % which is undesired.
-%
+
 % Two types of dots: SIGNAL dots (which move in a specific direction during
 % a trial, i.e. during "coherence") and NOISE dots (which just move
 % randomly)
-%
+
 % NB. The stimulus is coded in a way that there are 3 sets of dots, whose
 % positions are calculated randomly each for the first three frames, and 
 % every set of dots is "reshuffled" (noise dots) and moved (signal dots)
 % every third frame, depending on the positions of its dots three frames
 % previous.
-% 
-% Neb to Maria: I have added extra parameters to this function (detailed
-% below). The y-movement code that I have added works like this:
-%   1. Decides how many VMPs (vertical movement periods) there will be in
-%      the block (using mean_vfreq and mean_vfreq_sd).
-%   2. Decides how long those VMPs will be, including how long the ITIs
-%      (i.e. periods in-between VMPs) will be.
-%   3. Creates a frame_vector which is a vector, as long as all of the
-%      frames in the block, and for each frame assigns either 0 (no
-%      y-movement), 1 (upwards movements) or -1 (downwards movement).
-%   4. In the same FOR loop that you coded (going through all the frames to
-%      change the X position) I added code which changes the Y position of
-%      each dot as well, as long as the equivalent frame in frame_vector is
-%      either 1 or -1.
-%   5. Brings dots back if they escape the annulus (this is bugged--I am
-%      trying to fix this now).
-%
-% Input:
 
+% Input:
+%
 % discrete_trials   - flag 1 if discrete trials displayed for training, 0
 %                     if continuous version
 % trial             - current trial ID only for discrete trial version
@@ -111,24 +95,15 @@ function [xy, coherence_frame, coherence_frame_v, mean_coherence, ...
 % sd_duration       - ???
 % noise_function    - ???
 % stim_function     - ???
-
-%%% Input (continued, but for Y movement)
 %   mean_vcoh       = proportion of dots you want to move vertically
-%
 %   mean_vcoh_sd    = the standard deviation of mean_coh
-%
 %   mean_vfreq      = mean frequency of vertical motion periods (as a *number
 %                     per block*, e.g. if mean_freq == 5, then on average 
-%                     there will be 5 vertical motion periods per block)
-%                   
+%                     there will be 5 vertical motion periods per block)               
 %   mean_vfreq_sd   = the standard deviation of mean_freq
-
 %   mean_vlength    = mean length of vertical motion periods *in frames*
-
 %   mean_vlength_sd = the standard deviation of mean_length
-
 %   step_v          = speed of vertical movement *in pixels/frame*
-
 %   ap_radius       = radius of aperture (used to return dots if they move
 %                     out of annulus)
 % 
@@ -156,9 +131,6 @@ function [xy, coherence_frame, coherence_frame_v, mean_coherence, ...
 
 % here we pre-allocate frames 
 pre_incoh_mo_coh = [];
-
-% Neb note to self: remember to check if discrete_trials == 2 is even set
-% anymore (I just remember it being either 0 or 1, always)
 
 if discrete_trials == 1 % if we are moving dots for discrete trials
     blocks_shuffled = [];
