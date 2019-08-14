@@ -3,7 +3,7 @@
 - <a href="#software-requirements">Software requirements</a>
 - <a href="#summary">Summary</a>
 - <a href="#running-the-task">Running the task</a>
-- <a href="#training-participants">Training participants</a>
+- <a href="#training-and-experiments">Training and Experiments</a>
 - <a href="#code-explanation">Code explanation</a>
 - <a href="#function-calls">Function calls</a>
 - <a href="#analysis-scripts">Analysis scripts</a>
@@ -94,8 +94,10 @@ When recording data (EEG and maybe Eyelink):
   
 Again, check running_the_task.docx to see how we run our code if you're confused.
 
-## Training participants
-This involves exposing participants to different forms of the task which become more difficult and more representative of the real task over time. An example training document (which helps you during training, especially with the respect to the code you need to run) can be found in *training_doc.docx*. The first two sessions are discrete-committed, then three (i.e. 3-5) are discrete-averaged, and the last seven (i.e. 6-12) are continuous-averaged.
+## Training and Experiments
+Training: involves exposing participants to different forms of the task which become more difficult and more representative of the real task over time. An example training document (which helps you during training, especially with the respect to the code you need to run) can be found in *training_doc.docx*. The first two sessions are discrete-committed, then three (i.e. 3-5) are discrete-averaged, and the last seven (i.e. 6-12) are continuous-averaged.
+
+Experiments: when using EEG and EyeLink, *make sure you change the **eeg** and **eyelink** parameters in the parameters file!* If these aren't set to 1, your code won't run as it won't be able to find the connection to them.
 
 ## Code explanation
 As explained above, all tasks are composed of two types of periods: incoherent motion (i.e. **intertrial** periods, or ITIs) and coherent motion (i.e. **trial** periods). Sessions always start and end with incoherent motion.
