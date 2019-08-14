@@ -46,7 +46,7 @@ Their parameters are:
 -	integration_window: (discrete tasks only) flag 1 if participant has long integration window (i.e. long time to make a decision), or 0 for short
 -	ordered_coherences: (discrete tasks only) flag 1 if coherences are to be ordered in descending order (e.g. -0.7/0.7, then -0.6/6, then -0.5/0.5, etc.) with each of the two plus/minus one having equal chance to be presented first (used only for training)
 
-**rdk_continuous_motion**(paramstxt, training, session, rewardbar, annulus, subid, age, gender)
+**rdk_continuous_motion**(paramstxt, training, session, rewardbar, annulus, subid, age, gender, feedback)
 -	paramstxt: same as above
 -	training: flag, 1 if training (turns fix dot white during trials), 0 otherwise (no change)
 -	session: integer, session ID (to load relevant stimulus file)
