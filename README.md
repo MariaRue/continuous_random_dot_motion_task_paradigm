@@ -30,6 +30,21 @@ The scripts can run one of three different types of task: (1) **discrete-committ
 **Note:** The file *documentation_structures.xlsx* can be used as a reference for the function of different variables. This will mostly be useful when trying to understand the different scripts in the first couple of weeks; soon enough, you will learn what variables do by heart due to constant exposure and retrieval practice.
 
 ## Running the task
+
+**First, you must do the following things**:
+1. *Set up your parameter.csv file*. You need to change the following parameters in this file **before** you run your code for the first time in your lab, or it won't work:
+  - **subid**: change this when creating a stimulus file for **each participant**.
+  - **scrwidth**, **scrheight**, and **subdist**: these are the width and height of your screen, and the distance between the subject's eyes and the centre of the screen **in millimeters**! This is done so that the size of all stimuli in terms of visual degrees are the same across labs (the code automatically reads your resolution and converts visual degrees to pixels, don't worry).
+  - **root_stim** and **root_output**: these are the paths to the folders where you want the code to output its stimulus (root_stim) and behavioural data (root_output) files.
+2. *Ensure the code runs well*. Set your parameter.csv **subid** to a random number you won't use again (e.g. 777) and **block_length** to 1. Then, create three test sessions (i.e. create stimulus files, one for each session) by running these lines of code (you can run them all together). Don't worry, this document explains what these functions are/do a bit further down, but just run them for now to ensure the code works well.
+> create_stimuli(‘parameter.csv’, 0, 1, 1, 1, 1, 0);
+> create_stimuli(‘parameter.csv’, 0, 2, 2, 0, 0, 1);
+> create_stimuli(‘parameter.csv’, 0, 3, 0, 0, 0, 0);
+Then, run the following lines *individually*. Each line runs the task for a different session (one each we created above). For the first line, you should expect only to have discrete trials and committed horizontal motion. For the second, discrete trials with averaged motion *and* vertical motion, and for the third, continuous trials with averaged motion *without* vertical motion.
+3. *Go through running_the_task.docx to see how we run the code.* This document contains a list of code lines you can use directly to run the code with different types of trials (e.g. discrete-committed, vertical/no vertical motion, etc.) both for training and actual experiment.
+
+Now that everything works, let's have a look at how the code is structured and functions.
+
 Only two functions are used to run the task. The first one creates a stimulus file for a specific subject and session (containing many things, including the X/Y positions of the random dots during the task), and this stimulus file is then loaded and rendered by the second function. They are:
 
 1.	**create_stimuli()** must be used first for every session. This function creates a stimulus file containing all the relevant information required for a specific session, such as the type of task, the X/Y positions of all dots across all trials, the screen size, etc.
@@ -38,13 +53,14 @@ Only two functions are used to run the task. The first one creates a stimulus fi
 2.	**rdk_continuous_motion()** runs the task from a specific session (i.e. stimulus) file. It can modify the task to some limited extent (e.g. whether the fix dot turns white during trials, which is used during training) but most properties are found in the file.
 
 Their parameters are:
-**create_stimuli**(paramstxt, debug, session, discrete_trials, integration_window, ordered_coherences)
+**create_stimuli**(paramstxt, debug, session, discrete_trials, integration_window, ordered_coherences, vert_motion)
 -	paramstxt: char array, filename of parameters file (default is ‘parameter.csv’)
 -	debug: flagged from 0-3, runs task with different settings to help debug
 -	session: session number for creating stimulus file
 -	discrete_trials: flag, 1 if discrete trials are to be used (used for training), 0 otherwise
 -	integration_window: (discrete tasks only) flag 1 if participant has long integration window (i.e. long time to make a decision), or 0 for short
 -	ordered_coherences: (discrete tasks only) flag 1 if coherences are to be ordered in descending order (e.g. -0.7/0.7, then -0.6/6, then -0.5/0.5, etc.) with each of the two plus/minus one having equal chance to be presented first (used only for training)
+-   vert_motion (discrete-averaged and continuous trials only): flag 1 if you want to have vertical motion with "trials" corresponding to the horizontal motion used, 0 if you don't want any vertical motion
 
 **rdk_continuous_motion**(paramstxt, training, session, rewardbar, annulus, subid, age, gender, feedback)
 -	paramstxt: same as above
