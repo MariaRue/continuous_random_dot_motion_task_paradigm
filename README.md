@@ -37,18 +37,16 @@ The scripts can run one of three different types of task: (1) **discrete-committ
   - **scrwidth**, **scrheight**, and **subdist**: these are the width and height of your screen, and the distance between the subject's eyes and the centre of the screen **in millimeters**! This is done so that the size of all stimuli in terms of visual degrees are the same across labs (the code automatically reads your resolution and converts visual degrees to pixels, don't worry).
   - **root_stim** and **root_output**: these are the paths to the folders where you want the code to output its stimulus (root_stim) and behavioural data (root_output) files.
 2. *Ensure the code runs well*. Set your parameter.csv **subid** to a random number you won't use again (e.g. 777) and **block_length** to 1. Then, create three test sessions (i.e. create stimulus files, one for each session) by running these lines of code (you can run them all together). Don't worry, this document explains what these functions are/do a bit further down, but just run them for now to ensure the code works well.
-> create_stimuli(‘parameter.csv’, 0, 1, 1, 1, 1, 0);
-
-> create_stimuli(‘parameter.csv’, 0, 2, 2, 0, 0, 1);
-
-> create_stimuli(‘parameter.csv’, 0, 3, 0, 0, 0, 0);
+~~~~
+create_stimuli(‘parameter.csv’, 0, 1, 1, 1, 1, 0);
+create_stimuli(‘parameter.csv’, 0, 2, 2, 0, 0, 1);
+create_stimuli(‘parameter.csv’, 0, 3, 0, 0, 0, 0);
+~~~~
 
 Then, run the following lines *individually*. Each line runs the task for a different session (one each we created above). For the first line, you should expect *only* to have discrete trials and committed horizontal motion. For the second, discrete trials with averaged motion *and* vertical motion, and for the third, continuous trials with averaged motion *without* vertical motion.
-> rdk_continuous_motion(‘parameter.csv’, 1, 1, 1, 0, <id_you_used>, 0, 'n', 0, 0);
-
-> rdk_continuous_motion(‘parameter.csv’, 1, 2, 1, 0, <id_you_used>, 0, 'n', 0, 0);
-
-> rdk_continuous_motion(‘parameter.csv’, 0, 3, 1, 0, <id_you_used>, 0, 'n', 0, 1);
+`rdk_continuous_motion(‘parameter.csv’, 1, 1, 1, 0, <id_you_used>, 0, 'n', 0, 0);`
+`rdk_continuous_motion(‘parameter.csv’, 1, 2, 1, 0, <id_you_used>, 0, 'n', 0, 0);`
+`rdk_continuous_motion(‘parameter.csv’, 0, 3, 1, 0, <id_you_used>, 0, 'n', 0, 1);`
 
 3. *Go through **running_the_task.docx** to see how we run the code.* This document contains a list of code lines you can use directly to run the code with different types of trials (e.g. discrete-committed, vertical/no vertical motion, etc.) both for training and actual experiment.
 
