@@ -57,3 +57,5 @@ root_stim,C:\experiments\Maria_contin_motion\stim
 root_output,C:\experiments\Maria_contin_motion\behaviour
 min_duration,5
 max_duration,100
+eeg,0
+eyelink,0
