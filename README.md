@@ -43,12 +43,18 @@ The scripts can run one of three different types of task: (1) **discrete-committ
 
 > create_stimuli(‘parameter.csv’, 0, 3, 0, 0, 0, 0);
 
-Then, run the following lines *individually*. Each line runs the task for a different session (one each we created above). For the first line, you should expect only to have discrete trials and committed horizontal motion. For the second, discrete trials with averaged motion *and* vertical motion, and for the third, continuous trials with averaged motion *without* vertical motion.
-3. *Go through running_the_task.docx to see how we run the code.* This document contains a list of code lines you can use directly to run the code with different types of trials (e.g. discrete-committed, vertical/no vertical motion, etc.) both for training and actual experiment.
+Then, run the following lines *individually*. Each line runs the task for a different session (one each we created above). For the first line, you should expect *only* to have discrete trials and committed horizontal motion. For the second, discrete trials with averaged motion *and* vertical motion, and for the third, continuous trials with averaged motion *without* vertical motion.
+> rdk_continuous_motion(‘parameter.csv’, 1, 1, 1, 0, <id_you_used>, 0, 'n', 0, 0);
+
+> rdk_continuous_motion(‘parameter.csv’, 1, 2, 1, 0, <id_you_used>, 0, 'n', 0, 0);
+
+> rdk_continuous_motion(‘parameter.csv’, 0, 3, 1, 0, <id_you_used>, 0, 'n', 0, 1);
+
+3. *Go through **running_the_task.docx** to see how we run the code.* This document contains a list of code lines you can use directly to run the code with different types of trials (e.g. discrete-committed, vertical/no vertical motion, etc.) both for training and actual experiment.
 
 Now that everything works, let's have a look at how the code is structured and functions.
 
-Only two functions are used to run the task. The first one creates a stimulus file for a specific subject and session (containing many things, including the X/Y positions of the random dots during the task), and this stimulus file is then loaded and rendered by the second function. They are:
+**Only two functions are used to run the task**, as you've seen. The first one creates a stimulus file for a specific subject and session (containing many things, including the X/Y positions of the random dots during the task), and this stimulus file is then loaded and rendered by the second function. They are:
 
 1.	**create_stimuli()** must be used first for every session. This function creates a stimulus file containing all the relevant information required for a specific session, such as the type of task, the X/Y positions of all dots across all trials, the screen size, etc.
 - Note that each stimulus file is specific for the parameters with which it was created (i.e. those in the parameter file, which is ‘parameter.csv’ by default). So, for example, if it was created with certain parameters about screen size (width and height) running the task using that file on a different screen would be inappropriate.
