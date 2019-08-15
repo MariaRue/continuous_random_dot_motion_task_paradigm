@@ -349,6 +349,15 @@ b_vector = zeros(1, length(coherence_frame));
 % num_y_escaped = zeros(1, length(coherence_frame));
 % overlap = 0;
 
+% in case we are running discrete-committed trials, there can't be any
+% vertical motion
+if discrete_trials == 1
+    coherence_frame_v = zeros(total_frames, 1);
+    mean_coherence_v = zeros(total_frames, 1);
+    coherence_v = 0;
+    y_dir = 0;
+end
+
 for f = 1:total_frames
     % infer the coherence for the current frame from the relevant
     % coherence_frame vector (both for horizontal and vertical movement)
