@@ -146,7 +146,7 @@ This is a summary of all the analysis scripts that have been used for behavioura
 1. AFR_analyse_FAR(): Returns the means and distributions of False Alarms (FAs) per subject, per condition, either (i) per unit total time or (ii) per unit ITI time.
 2. AFH_analyse_FA_HR(): Returns scatterplots of FA (false alarm number) against HR (hit rate) per condition; each dot is one session, and same coloured dots come from the same subjects
 3. AW_analyse_waveforms(): Returns the mean waveform in the period leading up to a false alarm, per condition (period set by argument)
-4. AR_analyse_ratios(): Returns proportion correct responses (right and left presses) per coherence, proportion misses (right and left sides) per coherence, and both of these collapsed over sides (i.e. per absolute coherence) , all per condition
+4. AR_analyse_ratios(): Returns proportion correct responses (right and left presses) per coherence, proportion misses (right and left sides) per coherence, and both of these collapsed over sides (i.e. per absolute coherence) , all per condition. **NB. You will have to manually change the amount of flex_feedback you have in AR_extract_data() depending on your computer's framerate and your parameter.csv flex_feedback!**
 5. AD_analyse_distributions(): Returns histograms (distributions) of RTs and log RTs per condition
 6. ARts_analyse_rts(): Returns RTs (mean per subject, mean per session) per coherence, as well as log RTs, all per condition
 
