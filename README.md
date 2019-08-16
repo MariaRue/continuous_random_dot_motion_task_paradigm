@@ -6,7 +6,7 @@
 - <a href="#training-and-experiments">Training and Experiments</a>
 - <a href="#code-explanation">Code explanation</a>
 - <a href="#function-calls">Function calls</a>
-- <a href="#analysis-scripts">Analysis scripts</a>
+- <a href="#scripts">Scripts</a>
 - <a href="#other">Other</a>
 
 ## Hardware requirements
@@ -140,8 +140,9 @@ Below is a list of which functions are called in which order, and by what master
     - OR present_rdk (runs a continuous-trials task)
       - recalculate_xy_position: recalculates random dot positions after a response during a trial for the remainder of the period
 
-## Analysis scripts
-This is a summary of all the analysis scripts that have been used for behavioural data. **NB**. These are the only scripts you need to run (i.e. of the form XX_analyse_YY)! Every other script in the repo is called by these master scripts.
+## Scripts
+
+**Analysis scripts**. This is a summary of all the analysis scripts that have been used for behavioural data. **NB**. These are the only scripts you need to run (i.e. of the form XX_analyse_YY)! Every other script in the repo is called by these master scripts.
 
 1. AFR_analyse_FAR(): Returns the means and distributions of False Alarms (FAs) per subject, per condition, either (i) per unit total time or (ii) per unit ITI time.
 2. AFH_analyse_FA_HR(): Returns scatterplots of FA (false alarm number) against HR (hit rate) per condition; each dot is one session, and same coloured dots come from the same subjects
@@ -150,8 +151,12 @@ This is a summary of all the analysis scripts that have been used for behavioura
 5. AD_analyse_distributions(): Returns histograms (distributions) of RTs and log RTs per condition
 6. ARts_analyse_rts(): Returns RTs (mean per subject, mean per session) per coherence, as well as log RTs, all per condition
 
-## Other
--	Ensure you measure screen width and height, and participants’ distances to screen in millimetres. **You need to put these into the parameters.csv file** in order to control for differences in lab arrangements, screen sizes, etc. when it comes to task data.
+**Other scripts**. There are some additional scripts which may prove useful:
+
+1. plot_feedback(): This is called by present_rdk() to plot feedback either after each condition, or at the end of a session, *if* a flag is set for feedback in rdk_continuous_motion()'s last argument.
+2. synthesise_data(): If you need to load data from stimulus files (i.e. because it's not present in subjects' behavioural data) then the loading times are really slow, as stimulus files are massive. This script can be edited to transfer certain variables from all subject stimulus files into the behavioural files, so that upon analysis, you only need to load the behavioural files, greatly speeding up the process. I initially coded this script to transfer S.condition_vec (the order of conditions) from the stimulus to the behavioural data files, as I needed that for all my analysis scripts.
+
+## EEG/EyeLink triggers
 
 Here is an quick explanation of EEG/EyeLink triggers:
 
@@ -160,7 +165,7 @@ Here is an quick explanation of EEG/EyeLink triggers:
  - 203	Participant missed coherent motion trial
  - 202	Pressing “direction: right” button during incoherent motion
  - 206	Pressing “direction: left” button during incoherent motion
- - 11	Sent every 70s
+ - 11	  Sent every 70s
  - 210	Sent on last frame
  - 12	(?) Sent every minute
  - 23	Sent at beginning of incoherent motion (ITI)
