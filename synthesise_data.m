@@ -5,11 +5,19 @@ function synthesise_data(input_root, output_root, ids)
 % quite large (due to XY positions) compared to behavioural files, so we 
 % don't want to be loading them repeatedly every single time we want to
 % analyse some data...
-
+%
+% To edit which variables you want transferred, you must edit the script
+% itself.
+%
+% NB. ENSURE YOUR INPUT AND OUTPUT FOLDERS ARE DIFFERENT SO YOU DON'T
+% ACCIDENTALLY OVERWRITE YOUR DATA!
+%
 % Input
 %   input_root = path to input files
 %   output_root = path to output files
 %   ids = vector, containing IDs of subjects whose files you want to merge
+%
+% Neb Jovanovic, University of Oxford, 2019
 
 last_file_loaded = [];
 
@@ -31,17 +39,15 @@ for i = 1:length(ids)
         else
             sess_str = ['sess0' num2str(s)];
         end
-        input_root_b = ['D:\data\EEG\' sub_str '\behaviour\']; % delete
         fname_b = [sub_str '_' sess_str '_behav.mat'];
-        input_root_s = ['D:\data\EEG\' sub_str '\stim\']; % delete
         fname_s = [sub_str '_' sess_str '_stim.mat'];
-        if isfile([input_root_b fname_b]) && isfile([input_root_s fname_s])
+        if isfile([input_root fname_b]) && isfile([input_root fname_s])
             % do we have the file loaded?
-            if ~strcmp(last_file_loaded, [input_root_b fname_b])
+            if ~strcmp(last_file_loaded, [input_root fname_b])
                 % load up each participant's relevant session files
-                load([input_root_b fname_b]);
-                load([input_root_s fname_s]);
-                last_file_loaded = [input_root_b fname_b];
+                load([input_root fname_b]);
+                load([input_root fname_s]);
+                last_file_loaded = [input_root fname_b];
             end
             
             %%% DESIRED DATA FOR TRANSFER %%%
@@ -49,6 +55,7 @@ for i = 1:length(ids)
             % the stimulus file, and then insert that variable into the
             % behaviour file (do it using structures is my suggestion)
             S_behav.block_ID_cells = S.block_ID_cells;
+            S_behav.flex_feedback = S.flex_feedback;
 
             % Save to session file
             savePath = [output_root fname_b];
