@@ -7,7 +7,8 @@
 - <a href="#code-explanation">Code explanation</a>
 - <a href="#function-calls">Function calls</a>
 - <a href="#scripts">Scripts</a>
-- <a href="#other">Other</a>
+- <a href="#eegeyelink-triggers">EEG/EyeLink triggers</a>
+- <a href="#references">References</a>
 
 ## Hardware requirements
 -	I/O port to talk to EEG computer
